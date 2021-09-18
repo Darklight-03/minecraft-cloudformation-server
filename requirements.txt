@@ -1,0 +1,4 @@
+yq
+pytest
+boto3
+mock

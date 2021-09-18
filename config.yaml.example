@@ -1,0 +1,4 @@
+AWS:
+  LambdaArtifactBucket: bucket-name
+  StackName: minecraft
+  Region: us-west-2

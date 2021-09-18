@@ -1,0 +1,7 @@
+build/*
+unused/*
+tst/__pycache__/*
+credentials.yaml
+config.yaml
+todo.md
+.vscode/*
