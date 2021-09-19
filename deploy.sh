@@ -29,6 +29,8 @@ ParameterOverrides=(
 )
 
 # clean up build artifacts
+mkdir build > /dev/null 2>&1
+pip install -r requirements.txt > /dev/null 2>&1
 rm build/packaged-template.yaml > /dev/null 2>&1 
 
 # for each folder in src/lambda
@@ -40,6 +42,8 @@ for D in src/lambda/*; do
         echo "building ${function_name}" 
         cp -r "${D}/" "build/${function_name}"
         pip3 install -r "build/${function_name}/requirements.txt" -t "build/${function_name}/." > /dev/null 2>&1
+        #install locally as well so tests can run
+        pip install -r "build/${function_name}/requirements.txt" > /dev/null 2>&1
     fi
 done
 

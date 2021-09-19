@@ -1,4 +1,5 @@
 AWS:
   LambdaArtifactBucket: bucket-name
+  ModpackBucket: bucket-name
   StackName: minecraft
   Region: us-west-2

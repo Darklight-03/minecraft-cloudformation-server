@@ -1,0 +1,67 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the mainline branch
+  push:
+    branches: [ mainline ]
+  pull_request:
+    branches: [ mainline ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      
+      - name: Setup Python
+        uses: actions/setup-python@v2.2.2
+        with:
+          # Version range or exact version of a Python version to use, using SemVer's version range syntax.
+          python-version: 3.8
+          # The target architecture (x86, x64) of the Python interpreter.
+          architecture: x64
+
+      # Runs a set of commands using the runners shell
+      - name: build and test
+        run: |
+          # install global requirements and create build folder
+          pip install -r requirements.txt > /dev/null 2>&1
+          mkdir build
+
+          # for each folder in src/lambda
+          for D in src/lambda/*; do
+              if [ -d "${D}" ]; then
+                  function_name=$(basename "${D}")
+
+                  # copy the folder into build, then install requirements.txt with pip
+                  echo "building ${function_name}" 
+                  cp -r "${D}/" "build/${function_name}"
+                  pip3 install -r "build/${function_name}/requirements.txt" > /dev/null 2>&1
+              fi
+          done
+
+          # copy tests
+          for D in tst/lambda/*; do
+              if [ -d "${D}" ]; then
+                  function_name=$(basename "${D}")
+                  echo "copying ${function_name} tests" 
+                  cp -r "${D}"/* "build/${function_name}"
+              fi
+          done
+          
+          echo "executing tests"
+          cd build || exit
+          pytest || { echo "tests failed, exiting" ; exit 1; }
+          cd .. || exit
