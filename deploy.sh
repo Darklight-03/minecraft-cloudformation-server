@@ -33,13 +33,10 @@ ParameterOverrides=(
 # clean up old build artifacts
 rm build/packaged-template.yaml > /dev/null 2>&1 
 
-if [[ "$1" == "clean" || "$2" == "clean" ]]
-then
-    echo "Cleaning up old build"
-    ./clean.sh
-fi
+echo "Cleaning up old build"
+./clean.sh
 
-if [[ "$1" == "install" || "$2" == "install" ]]
+if [[ "$1" == "install" ]]
 then
     ./install.sh
 fi
