@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# clean build folder
+./clean.sh
+
 # copy files into build folder
 for D in src/lambda/*; do
     if [ -d "${D}" ]; then
