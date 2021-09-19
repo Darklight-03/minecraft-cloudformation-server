@@ -34,21 +34,29 @@ jobs:
           architecture: x64
 
       # Runs a set of commands using the runners shell
-      - name: build and test
+      - name: Setup Environment
         run: |
           # install global requirements and create build folder
           pip install -r requirements.txt > /dev/null 2>&1
           mkdir build
 
-          # for each folder in src/lambda
+          # install requirements for each function
           for D in src/lambda/*; do
               if [ -d "${D}" ]; then
                   function_name=$(basename "${D}")
+                  echo "Installing ${function_name} requirements" 
+                  pip install -r "${D}/requirements.txt" > /dev/null 2>&1
+              fi
+          done
 
-                  # copy the folder into build, then install requirements.txt with pip
-                  echo "building ${function_name}" 
+
+      - name: Build
+        run: |
+          for D in src/lambda/*; do
+              if [ -d "${D}" ]; then
+                  function_name=$(basename "${D}")
+                  echo "Copying ${function_name} to build/" 
                   cp -r "${D}/" "build/${function_name}"
-                  pip3 install -r "build/${function_name}/requirements.txt" > /dev/null 2>&1
               fi
           done
 
@@ -60,7 +68,9 @@ jobs:
                   cp -r "${D}"/* "build/${function_name}"
               fi
           done
-          
+
+      - name: Test
+        run: |
           echo "executing tests"
           cd build || exit
           pytest || { echo "tests failed, exiting" ; exit 1; }

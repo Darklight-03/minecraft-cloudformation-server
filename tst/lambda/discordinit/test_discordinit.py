@@ -1,7 +1,8 @@
-import pytest
-from unittest.mock import patch, ANY
+from unittest.mock import ANY, patch
+
 with patch('os.environ') as environ:
     from discordinit import lambda_handler
+
 
 @patch('requests.post')
 def test_posts_commands(post):
@@ -11,4 +12,4 @@ def test_posts_commands(post):
     # check that header has authorization token
     assert "Authorization" in post.call_args.kwargs.get('headers').keys()
     # Check that commands is at end of url
-    assert "commands" == post.call_args.args[0].split("/")[-1]
+    assert post.call_args.args[0].split("/")[-1] == "commands"

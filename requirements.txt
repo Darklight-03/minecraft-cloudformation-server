@@ -2,3 +2,4 @@ yq
 pytest
 boto3
 mock
+pylint

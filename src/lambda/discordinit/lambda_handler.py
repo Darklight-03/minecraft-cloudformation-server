@@ -1,8 +1,10 @@
-import requests
 import os
+
+import requests
 
 APPLICATION_ID = os.environ['ApplicationId']
 BOT_TOKEN = os.environ['BotToken']
+
 
 def lambda_handler(event, context):
     url = f"https://discord.com/api/v8/applications/{APPLICATION_ID}/commands"
@@ -53,4 +55,4 @@ def lambda_handler(event, context):
         "Authorization": f"Bot {BOT_TOKEN}"
     }
 
-    r = requests.post(url, headers=headers, json=json)
+    requests.post(url, headers=headers, json=json)
