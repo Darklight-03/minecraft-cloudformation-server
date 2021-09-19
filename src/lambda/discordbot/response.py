@@ -20,16 +20,17 @@ class ChannelMessageResponse:
     def __init__(self, content) -> None:
         self.type = ResponseType.MESSAGE
         self.content = content
-        self.component_rows = [ComponentRow()]
+        self.component_rows = []
 
-    def add_component_row(self, row):
-        self.component_rows.append(row)
+    def add_component_row(self):
+        self.component_rows.append(ComponentRow())
 
     def get_response(self):
-        return {
-            "type": self.type,
-            "data": {
-                "content": self.content,
-                "components": list(map(lambda a: a.get_value(), self.component_rows)),
-            },
-        }
+        response = {}
+        response["type"] = self.type
+        data = {}
+        data["content"] = self.content
+        if len(self.component_rows) > 0:
+            data["components"] = list(map(lambda a: a.get_value(), self.component_rows))
+        response["data"] = data
+        return response

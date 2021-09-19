@@ -16,7 +16,7 @@ class ComponentRow:
     def get_value(self):
         value = {}
         value["type"] = ComponentType.ROW
-        value["components"] = self.components
+        value["components"] = list(map(lambda comp: comp.get_value(), self.components))
         return value
 
 
@@ -45,7 +45,7 @@ class Button:
         if self.emoji != "":
             value["emoji"] = self.emoji
         if self.id != "":
-            value["id"] = self.id
+            value["custom_id"] = self.id
         if self.disabled != "":
             value["disabled"] = self.disabled
         return value

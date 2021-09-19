@@ -30,13 +30,15 @@ def start_server():
 
 def get_response():
     BLEP = ChannelMessageResponse("Test Message")
+    BLEP.add_component_row()
     BLEP.component_rows[0].add_component(
         Button(ButtonStyle.PRIMARY, label="Yes", id="yesbutton")
     )
     BLEP.component_rows[0].add_component(
         Button(ButtonStyle.DANGER, label="No", id="nobutton")
     )
+    return BLEP.get_response()
 
 
 def blep(body):
-    return get_response(body)
+    return get_response()

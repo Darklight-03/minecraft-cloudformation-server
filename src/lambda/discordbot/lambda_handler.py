@@ -2,7 +2,7 @@ import os
 
 from nacl.signing import VerifyKey
 
-from discordbot import blep
+from discordbot.blep import blep
 from discordbot.request import is_app_command, is_blep, is_ping
 from discordbot.response import GenericResponse
 
