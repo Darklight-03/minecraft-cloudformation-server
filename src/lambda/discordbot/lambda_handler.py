@@ -2,15 +2,14 @@ import os
 
 from nacl.signing import VerifyKey
 
-from discordbot.blep import blep
-from discordbot.request import is_app_command, is_blep, is_ping
-from discordbot.response import GenericResponse
-
-PUBLIC_KEY = os.environ["PublicKey"]
+from lib.blep import ServerMenu, ServerState
+from lib.request import Commands, Components, Request
+from lib.response import GenericResponse
 
 
 # VERIFICATION
 def verify_signature(event):
+    PUBLIC_KEY = os.environ["PublicKey"]
     raw_body = event.get("rawBody")
     auth_sig = event["params"]["header"].get("x-signature-ed25519")
     auth_ts = event["params"]["header"].get("x-signature-timestamp")
@@ -31,12 +30,21 @@ def lambda_handler(event, context):
         raise Exception(f"[UNAUTHORIZED] Invalid request signature: {e}")
 
     # check if message is a ping
-    body = event.get("body-json")
-    if is_ping(body):
+    request = Request(event.get("body-json"))
+
+    if request.is_ping():
         return GenericResponse.PONG_RESPONSE
 
-    if is_app_command(body):
-        if is_blep(body):
-            return blep(body)
+    if request.is_app_command():
+        if request.get_command() == Commands.BLEP:
+            return ServerMenu(request).run()
 
-    raise Exception(f"[INVALID_INPUT] Unrecognized request body: {body}")
+    if request.is_component_interaction():
+        if request.get_component() == Components.START_SERVER:
+            return ServerState(request).run()
+        if request.get_component() == Components.STOP_SERVER:
+            return ServerState(request).run()
+
+    raise Exception(
+        f"[INVALID_INPUT] Unrecognized request body: {event.get('body-json')}"
+    )

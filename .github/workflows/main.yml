@@ -73,5 +73,6 @@ jobs:
         run: |
           echo "executing tests"
           cd build || exit
-          pytest || { echo "tests failed, exiting" ; exit 1; }
+          coverage run --rcfile='../.coveragerc' -m pytest || { echo "tests failed, exiting" ; exit 1; }
+          coverage report --rcfile='../.coveragerc' || exit 1
           cd .. || exit

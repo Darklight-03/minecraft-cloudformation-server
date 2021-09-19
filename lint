@@ -1,0 +1,4 @@
+#!/bin/bash
+./clean
+./test
+pylint build/**/*.py

@@ -4,3 +4,4 @@ boto3
 mock
 pylint
 pre-commit
+coverage

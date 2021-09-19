@@ -34,35 +34,14 @@ ParameterOverrides=(
 rm build/packaged-template.yaml > /dev/null 2>&1 
 
 echo "Cleaning up old build"
-./clean.sh
+./clean
 
 if [[ "$1" == "install" ]]
 then
-    ./install.sh
+    ./install
 fi
 
-# copy files into build folder
-for D in src/lambda/*; do
-    if [ -d "${D}" ]; then
-        function_name=$(basename "${D}")
-        echo "Copying ${function_name} to build/" 
-        cp -r "${D}/" "build/${function_name}"
-    fi
-done
-for D in tst/lambda/*; do
-    if [ -d "${D}" ]; then
-        function_name=$(basename "${D}")
-        echo "copying ${function_name} tests" 
-        cp -r "${D}"/* "build/${function_name}"
-    fi
-done
-
-### Test ###
-
-echo "executing tests"
-cd build || exit
-pytest || { echo "tests failed, exiting" ; exit 1; }
-cd .. || exit
+./test || exit 1
 
 ### Package for deployment ###
 
