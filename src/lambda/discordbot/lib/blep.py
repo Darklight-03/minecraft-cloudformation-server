@@ -17,18 +17,22 @@ class ServerState:
     RUNNING = "Running"
     STOPPED = "Stopped"
 
+    def verb(state):
+        return "starting" if state == ServerState.RUNNING else "stopping"
+
+    def get_state_from_component(component):
+        return (
+            ServerState.RUNNING
+            if component == Components.START_SERVER
+            else ServerState.STOPPED
+        )
+
 
 class SetServerState:
     def __init__(self, request):
-
         self.request = request
         component = self.request.get_component()
-        if component == Components.START_SERVER:
-            self.desired_state = ServerState.RUNNING
-            self.response_message = "Starting Server..."
-        if component == Components.STOP_SERVER:
-            self.desired_state = ServerState.STOPPED
-            self.response_message = "Stopping Server..."
+        self.desired_state = ServerState.get_state_from_component(component)
         self.stack_name = os.environ.get("STACK_NAME")
         self.cfn = boto3.client("cloudformation")
         self.stack = self.cfn.describe_stacks(StackName=self.stack_name)
@@ -56,14 +60,11 @@ class SetServerState:
         return "Success"
 
     def get_message_update_success(self):
-        return (
-            self.response.withDisabledStart()
-            .withDisabledStop()
-            .withContent(
-                f"Server is currently changing to {self.desired_state} status..."
-            )
-            .run()
+        self.response.withDisabledStart().withDisabledStop()
+        self.response.withContent(
+            f"Server is currently {ServerState.verb(self.desired_state)}..."
         )
+        return self.response.get_response()
 
     def get_validation_error(self):
         if "is in UPDATE_IN_PROGRESS state" in self.output:
@@ -71,9 +72,15 @@ class SetServerState:
         elif "No updates are to be performed" in self.output:
             self.output = f"Server is already in state {self.desired_state}."
         if self.desired_state == ServerState.RUNNING:
-            return self.response.withDisabledStart().withContent(self.output).run()
+            return (
+                self.response.withDisabledStart()
+                .withContent(self.output)
+                .get_response()
+            )
         else:
-            return self.response.withDisabledStop().withContent(self.output).run()
+            return (
+                self.response.withDisabledStop().withContent(self.output).get_response()
+            )
 
     def run(self):
         self.output = self.start_server()
@@ -85,6 +92,16 @@ class SetServerState:
 
 class ServerMenu:
     def __init__(self, type):
+        self.cfn = boto3.client("cloudformation")
+        self.stack = self.cfn.describe_stacks(
+            StackName=os.environ.get("STACK_NAME")
+        ).get("Stacks")[-1]
+        self.current_state = [
+            parameter.get("ParameterValue")
+            for parameter in self.stack.get("Parameters")
+            if parameter.get("ParameterKey") == "ServerState"
+        ][0]
+        self.stack_status = self.stack.get("StackStatus")
         self.menu = MessageResponse(type, f"Test Message {str(datetime.now())}")
         self.menu.add_component_row()
         self.menu.component_rows[0].add_component(
@@ -114,5 +131,19 @@ class ServerMenu:
         self.menu.content = content
         return self
 
+    def get_response(self):
+        return self.menu.get_response()
+
     def run(self):
+        if self.stack_status not in ["UPDATE_COMPLETE", "CREATE_COMPLETE"]:
+            self.withDisabledStart().withDisabledStop()
+            self.withContent(
+                f"Server is currently {ServerState.verb(self.current_state)}..."
+            )
+        else:
+            if self.current_state == ServerState.RUNNING:
+                self.withDisabledStart()
+            elif self.current_state == ServerState.STOPPED:
+                self.withDisabledStop()
+            self.withContent(f"Server is currently {self.current_state.lower()}")
         return self.menu.get_response()

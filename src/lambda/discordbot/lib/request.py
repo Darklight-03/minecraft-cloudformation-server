@@ -43,7 +43,7 @@ class Request:
         if "message" in input.keys():
             self.message = input.get("message")
 
-    def invalidRequestTypeException():
+    def invalid_request():
         raise Exception("Invalid request type")
 
     # return name of command for APP type
@@ -51,13 +51,13 @@ class Request:
         if self.is_app_command:
             return self.data.get("name")
         else:
-            self.invalidRequestTypeException()
+            self.invalid_request()
 
     def get_component(self):
         if self.is_component_interaction:
             return self.data.get("custom_id")
         else:
-            self.invalidRequestTypeException()
+            self.invalid_request()
 
     # check request types
     def is_ping(self):

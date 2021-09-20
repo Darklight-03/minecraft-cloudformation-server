@@ -25,12 +25,6 @@ class MessageResponse:
     def add_component_row(self):
         self.component_rows.append(ComponentRow())
 
-    def add_components_from_request(self, components):
-        for row in components:
-            new_row = ComponentRow()
-            new_row.add_components_from_request(row.get("components"))
-            self.component_rows.append(new_row)
-
     def get_response(self):
         response = {}
         response["type"] = self.type

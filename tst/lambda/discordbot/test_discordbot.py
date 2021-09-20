@@ -1,9 +1,11 @@
 from copy import deepcopy
+from tstlib.test_mock_objects import newDescribeStacks
 from unittest.mock import patch
 from botocore.exceptions import ClientError
 
 import lambda_handler
 import pytest
+from lib.blep import ServerState
 from lib.components import ComponentType
 from lib.request import Components, Request
 from lib.response import ResponseType
@@ -203,7 +205,6 @@ def test_verify_signature(verify_key):
 @patch("lambda_handler.verify_signature")
 def test_invalid_request_type(vsig):
     event = incoming_packet(59).get_output()
-    # TODO assert lambda_handler returns correct value later
     with pytest.raises(Exception) as excinfo:
         lambda_handler.lambda_handler(event, "")
     assert "[INVALID_INPUT]" in str(excinfo)
@@ -213,14 +214,16 @@ def test_invalid_request_type(vsig):
 @patch("lambda_handler.verify_signature")
 def test_ping(vsig):
     event = incoming_packet(PacketType.PING).get_output()
-    # TODO assert lambda_handler returns correct value later
     response = lambda_handler.lambda_handler(event, "")
     assert_response_is_valid(response, ResponseType.PONG)
     vsig.assert_called_once_with(event)
 
 
+@patch.dict("os.environ", {"STACK_NAME": "StackName"})
+@patch("boto3.client")
 @patch("lambda_handler.verify_signature")
-def test_server_menu(vsig):
+def test_server_menu(vsig, client):
+    client().describe_stacks.return_value = newDescribeStacks().output
     event = incoming_packet(PacketType.APP).with_name("blep").get_output()
     # TODO assert lambda_handler returns correct value later
     response = lambda_handler.lambda_handler(event, "")
@@ -296,22 +299,19 @@ def test_start_server_validation_error(vsig, client, component_name, error_messa
 @pytest.mark.parametrize(
     "component_name", ["button_start_server", "button_stop_server"]
 )
-def test_start_server(vsig, client, component_name):
-
-    parameters = [
-        {"ParameterKey": v, "ParameterValue": v}
-        for v in [
-            "param1",
-            "param2",
-            "param3",
-            "param4",
-            "ServerState",
-            "param5",
-        ]
-    ]
-    client().describe_stacks.return_value = {
-        "Stacks": [{"Parameters": deepcopy(parameters)}]
-    }
+def test_start_server_success(vsig, client, component_name):
+    if component_name == Components.STOP_SERVER:
+        verb = "stopping"
+        state = ServerState.STOPPED
+        oldstate = ServerState.RUNNING
+    elif component_name == Components.START_SERVER:
+        verb = "starting"
+        state = ServerState.RUNNING
+        oldstate = ServerState.STOPPED
+    client().describe_stacks.return_value = newDescribeStacks(
+        server_state=oldstate
+    ).output
+    print(newDescribeStacks().output)
 
     event = (
         incoming_packet(PacketType.COMPONENT)
@@ -340,24 +340,39 @@ def test_start_server(vsig, client, component_name):
         if id == "button_refresh_menu":
             assert component.get("disabled") is False
     vsig.assert_called_once_with(event)
-    if component_name == Components.STOP_SERVER:
-        parameters[4]["ParameterValue"] = "Stopped"
-    if component_name == Components.START_SERVER:
-        parameters[4]["ParameterValue"] = "Running"
-    assert "Server is currently changing to" in response.get("data").get("content")
-    assert client().update_stack.call_args.kwargs.get("Parameters") == parameters
+    assert f"Server is currently {verb}" in response.get("data").get("content")
+    desired_parameters = (
+        newDescribeStacks(server_state=state).output.get("Stacks")[-1].get("Parameters")
+    )
+    assert (
+        client().update_stack.call_args.kwargs.get("Parameters") == desired_parameters
+    )
 
 
+@patch.dict("os.environ", {"STACK_NAME": "StackName"})
+@patch("boto3.client")
 @patch("lambda_handler.verify_signature")
-def test_refresh_menu(vsig):
+@pytest.mark.parametrize("stack_status", ["UPDATE_COMPLETE", "UPDATE_IN_PROGRESS"])
+@pytest.mark.parametrize("server_state", [ServerState.STOPPED, ServerState.RUNNING])
+def test_refresh_menu(vsig, client, server_state, stack_status):
+    client().describe_stacks.return_value = newDescribeStacks(
+        server_state=server_state, stack_status=stack_status
+    ).output
     event = (
         incoming_packet(PacketType.COMPONENT)
         .with_component_name("button_refresh_menu")
         .get_output()
     )
-    # TODO assert lambda_handler returns correct value later
     response = lambda_handler.lambda_handler(event, "")
     assert_response_is_valid(response, ResponseType.COMPONENT_MESSAGE)
+    if stack_status == "UPDATE_COMPLETE":
+        assert f"Server is currently {server_state.lower()}" in response.get(
+            "data"
+        ).get("content")
+    else:
+        assert f"Server is currently {ServerState.verb(server_state)}" in response.get(
+            "data"
+        ).get("content")
     vsig.assert_called_once_with(event)
 
 
