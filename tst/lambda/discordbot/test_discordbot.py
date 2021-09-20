@@ -5,7 +5,7 @@ from botocore.exceptions import ClientError
 
 import lambda_handler
 import pytest
-from lib.blep import ServerState
+from lib.server_menu import ServerState
 from lib.components import ComponentType
 from lib.request import Components, Request
 from lib.response import ResponseType
@@ -224,7 +224,7 @@ def test_ping(vsig):
 @patch("lambda_handler.verify_signature")
 def test_server_menu(vsig, client):
     client().describe_stacks.return_value = newDescribeStacks().output
-    event = incoming_packet(PacketType.APP).with_name("blep").get_output()
+    event = incoming_packet(PacketType.APP).with_name("menu").get_output()
     # TODO assert lambda_handler returns correct value later
     response = lambda_handler.lambda_handler(event, "")
     assert_response_is_valid(response, ResponseType.MESSAGE)

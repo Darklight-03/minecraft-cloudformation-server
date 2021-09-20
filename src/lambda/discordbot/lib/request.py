@@ -12,7 +12,7 @@ class CommandType:
 
 
 class Commands:
-    BLEP = "blep"
+    SERVER_MENU = "menu"
 
 
 class Components:

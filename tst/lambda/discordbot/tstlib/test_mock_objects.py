@@ -1,4 +1,4 @@
-from lib.blep import ServerState
+from lib.server_menu import ServerState
 
 
 class newDescribeStacks:

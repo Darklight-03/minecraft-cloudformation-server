@@ -2,8 +2,8 @@ import os
 
 import requests
 
-APPLICATION_ID = os.environ['ApplicationId']
-BOT_TOKEN = os.environ['BotToken']
+APPLICATION_ID = os.environ["ApplicationId"]
+BOT_TOKEN = os.environ["BotToken"]
 
 
 def lambda_handler(event, context):
@@ -12,47 +12,14 @@ def lambda_handler(event, context):
     # This is an example CHAT_INPUT or Slash Command, with a type of 1
     json = [
         {
-            "name": "blep",
+            "name": "menu",
             "type": 1,
-            "description": "A probably not working command",
-            "options": [
-                {
-                    "name": "arg",
-                    "description": "The type of blep",
-                    "type": 3,
-                    "required": True,
-                    "choices": [
-                        {
-                            "name": "Dog",
-                            "value": "dogg"
-                        },
-                        {
-                            "name": "Krog",
-                            "value": "krogg"
-                        },
-                        {
-                            "name": "Trog",
-                            "value": "trogg"
-                        }
-                    ]
-                },
-                {
-                    "name": "dostuff",
-                    "description": "Whether to do stuffs",
-                    "type": 5,
-                    "required": False
-                }
-            ]
+            "description": "summon a menu of the minecraft server",
+            "options": [],
         },
-        {
-            "name": "blop",
-            "type": 2,
-            "description": ""
-        }
+        {"name": "blop", "type": 2, "description": ""},
     ]
 
-    headers = {
-        "Authorization": f"Bot {BOT_TOKEN}"
-    }
+    headers = {"Authorization": f"Bot {BOT_TOKEN}"}
 
     requests.post(url, headers=headers, json=json)

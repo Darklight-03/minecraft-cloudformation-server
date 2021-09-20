@@ -3,7 +3,7 @@ import os
 from nacl.signing import VerifyKey
 from lib.response import MessageResponse, ResponseType
 
-from lib.blep import ServerMenu, SetServerState
+from lib.server_menu import ServerMenu, SetServerState
 from lib.request import Commands, Components, Request
 from lib.response import GenericResponse
 
@@ -38,7 +38,7 @@ def lambda_handler(event, context):
         return GenericResponse.PONG_RESPONSE
 
     if request.is_app_command():
-        if request.get_command() == Commands.BLEP:
+        if request.get_command() == Commands.SERVER_MENU:
             response = ServerMenu(ResponseType.MESSAGE).run()
 
     if request.is_component_interaction():
