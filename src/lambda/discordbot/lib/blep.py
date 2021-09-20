@@ -1,6 +1,9 @@
 import os
 import warnings
 
+from datetime import datetime
+
+from botocore.exceptions import ClientError
 from lib.components import Button, ButtonStyle
 from lib.request import Components
 from lib.response import MessageResponse, ResponseType
@@ -11,10 +14,12 @@ with warnings.catch_warnings():
 
 
 class ServerState:
+    RUNNING = "Running"
+    STOPPED = "Stopped"
+
+
+class SetServerState:
     def __init__(self, request):
-        class ServerState:
-            RUNNING = "Running"
-            STOPPED = "Stopped"
 
         self.request = request
         component = self.request.get_component()
@@ -30,6 +35,8 @@ class ServerState:
 
     # may want to do this in new lambda function if take too long (probably)
     def start_server(self):
+        self.response = ServerMenu(ResponseType.COMPONENT_MESSAGE)
+
         def set_state(x):
             if x.get("ParameterKey") == "ServerState":
                 x["ParameterValue"] = self.desired_state
@@ -37,42 +44,69 @@ class ServerState:
 
         stack_parameters = self.stack.get("Stacks")[-1].get("Parameters")
         stack_parameters = list(map(set_state, stack_parameters))
-        self.cfn.update_stack(
-            StackName=self.stack_name,
-            UsePreviousTemplate=True,
-            Capabilities=["CAPABILITY_IAM"],
-            Parameters=stack_parameters,
-        )
-        return True
+        try:
+            self.cfn.update_stack(
+                StackName=self.stack_name,
+                UsePreviousTemplate=True,
+                Capabilities=["CAPABILITY_IAM"],
+                Parameters=stack_parameters,
+            )
+        except ClientError as e:
+            return str(e)
+        return "Success"
 
     def get_message_update_success(self):
-        response = MessageResponse(
-            ResponseType.COMPONENT_MESSAGE, self.response_message
+        return (
+            self.response.withDisabledStart()
+            .withDisabledStop()
+            .withContent(self.output)
+            .run()
         )
-        response.add_components_from_request(self.request.message.get("components"))
-        return response.get_response()
+
+    def get_validation_error(self):
+        if self.desired_state == ServerState.RUNNING:
+            return self.response.withDisabledStart().withContent(self.output).run()
+        else:
+            return self.response.withDisabledStop().withContent(self.output).run()
 
     def run(self):
-        if self.start_server():
+        self.output = self.start_server()
+        if self.output == "Success":
             return self.get_message_update_success()
+        elif "ValidationError" in self.output:
+            return self.get_validation_error()
 
 
 class ServerMenu:
-    def __init__(self, request):
-        self.request = request
-        self.menu = MessageResponse(ResponseType.MESSAGE, "Test Message")
+    def __init__(self, type):
+        self.menu = MessageResponse(type, f"Test Message {str(datetime.now())}")
         self.menu.add_component_row()
         self.menu.component_rows[0].add_component(
             Button(ButtonStyle.SUCCESS, label="Start", id="button_start_server")
         )
         self.menu.component_rows[0].add_component(
-            Button(
-                ButtonStyle.DANGER, label="Stop", id="button_stop_server", disabled=True
-            )
+            Button(ButtonStyle.DANGER, label="Stop", id="button_stop_server")
         )
         self.menu.component_rows[0].add_component(
-            Button(ButtonStyle.SECONDARY, label="Refresh", id="button_refresh_menu")
+            Button(
+                ButtonStyle.SECONDARY,
+                label="Refresh",
+                id="button_refresh_menu",
+                disabled=False,
+            )
         )
+
+    def withDisabledStart(self):
+        self.menu.component_rows[0].get_component("button_start_server").disabled = True
+        return self
+
+    def withDisabledStop(self):
+        self.menu.component_rows[0].get_component("button_stop_server").disabled = True
+        return self
+
+    def withContent(self, content):
+        self.menu.content = content
+        return self
 
     def run(self):
         return self.menu.get_response()

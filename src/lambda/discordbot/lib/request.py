@@ -33,7 +33,7 @@ class Request:
         if "channel_id" in input.keys():
             self.channel_id = input.get("channel_id")
         if "member" in input.keys():
-            self.user = input.get("member")
+            self.user = input.get("member").get("user")
         if "user" in input.keys():
             self.user = input.get("user")
         if "token" in input.keys():

@@ -13,16 +13,19 @@ class ComponentRow:
     def add_component(self, component):
         self.components.append(component)
 
-    def add_components_from_request(self, components):
-        for component in components:
-            if component.get("type") == ComponentType.BUTTON:
-                self.components.append(Button(component))
-            elif component.get("type") == ComponentType.MENU:
-                # TODO menu not yet supported
-                # self.components.append(Menu(component))
-                raise Exception("menu not yet supported")
-            else:
-                raise Exception("unknown component type")
+    # TODO def add_components_from_request(self, components):
+    #     for component in components:
+    #         if component.get("type") == ComponentType.BUTTON:
+    #             self.components.append(Button(component))
+    #         elif component.get("type") == ComponentType.MENU:
+    #             # TODO menu not yet supported
+    #             # self.components.append(Menu(component))
+    #             raise Exception("menu not yet supported")
+    #         else:
+    #             raise Exception("unknown component type")
+
+    def get_component(self, id):
+        return [component for component in self.components if component.id == id][0]
 
     def get_value(self):
         value = {}
@@ -41,22 +44,22 @@ class ButtonStyle:
 
 class Button:
     def __init__(self, style, label="", emoji="", id="", disabled=""):
-        if type(style) is dict:
-            self.init_from_dict(style)
-            return
+        # TODO if type(style) is dict:
+        #     self.init_from_dict(style)
+        #     return
         self.style = style
         self.label = label
         self.emoji = emoji
         self.id = id
         self.disabled = disabled
 
-    def init_from_dict(self, dictionary):
-        self.label = ""
-        self.emoji = ""
-        self.id = ""
-        self.disabled = ""
-        for key in dictionary:
-            setattr(self, key, dictionary[key])
+    # TODO def init_from_dict(self, dictionary):
+    #     self.label = ""
+    #     self.emoji = ""
+    #     self.id = ""
+    #     self.disabled = ""
+    #     for key in dictionary:
+    #         setattr(self, key, dictionary[key])
 
     def get_value(self):
         value = {}

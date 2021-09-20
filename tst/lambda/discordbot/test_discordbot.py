@@ -1,5 +1,6 @@
 from copy import deepcopy
 from unittest.mock import patch
+from botocore.exceptions import ClientError
 
 import lambda_handler
 import pytest
@@ -33,6 +34,7 @@ class incoming_packet:
         self.json["type"] = type
         self.data = {}
         self.json["data"] = {}
+        self.json["user"] = {"id": "105165905075396608", "username": "Darklight_03"}
 
     def with_name(self, name):
         self.name = name
@@ -48,6 +50,20 @@ class incoming_packet:
         self.message = message
         self.json["message"] = message
         return self
+
+    # default is me
+    def with_user(self, username="User", id="98124"):
+        self.userid = id
+        self.username = username
+        self.json["user"] = {"id": self.userid, "username": self.username}
+        return self
+
+    def with_member(self, username="User", id="98124"):
+        self.userid = id
+        self.username = username
+        member = {}
+        member["user"] = {"id": self.userid, "username": self.username}
+        self.json["member"] = member
 
     def get_output(self):
         return {"body-json": self.json}
@@ -218,6 +234,60 @@ def test_server_menu(vsig):
 @pytest.mark.parametrize(
     "component_name", ["button_start_server", "button_stop_server"]
 )
+def test_start_server_validation_error(vsig, client, component_name):
+    parameters = [
+        {"ParameterKey": v, "ParameterValue": v}
+        for v in [
+            "param1",
+            "param2",
+            "param3",
+            "param4",
+            "ServerState",
+            "param5",
+        ]
+    ]
+    client().describe_stacks.return_value = {
+        "Stacks": [{"Parameters": deepcopy(parameters)}]
+    }
+    client().update_stack.side_effect = ClientError(
+        error_response={"Error": {"Code": "ValidationError", "Message": "message"}},
+        operation_name="operation",
+    )
+
+    event = (
+        incoming_packet(PacketType.COMPONENT)
+        .with_component_name(component_name)
+        .with_message(
+            {
+                "content": "some_message",
+                "components": [new_row([new_button("start"), new_button("stop")])],
+            }
+        )
+        .get_output()
+    )
+    response = lambda_handler.lambda_handler(event, "")
+    assert_response_is_valid(response, ResponseType.COMPONENT_MESSAGE)
+
+    # Assert start and stop are disabled on success
+    components = response["data"]["components"][0]["components"]
+    id_list = ["button_stop_server", "button_start_server", "button_refresh_menu"]
+    for component in components:
+        id = component.get("custom_id")
+        assert id in id_list
+        if id == component_name:
+            assert component.get("disabled") is True
+        else:
+            assert component.get("disabled") is not True
+    assert "ValidationError" in response.get("data").get("content")
+    vsig.assert_called_once_with(event)
+
+
+@patch.dict("os.environ", {"STACK_NAME": "StackName"})
+@patch("boto3.client")
+@patch("lambda_handler.verify_signature")
+@pytest.mark.parametrize(
+    "component_name", ["button_start_server", "button_stop_server"]
+)
 def test_start_server(vsig, client, component_name):
 
     parameters = [
@@ -248,9 +318,50 @@ def test_start_server(vsig, client, component_name):
     )
     response = lambda_handler.lambda_handler(event, "")
     assert_response_is_valid(response, ResponseType.COMPONENT_MESSAGE)
+
+    # Assert start and stop are disabled on success
+    components = response["data"]["components"][0]["components"]
+    id_list = ["button_stop_server", "button_start_server", "button_refresh_menu"]
+    for component in components:
+        id = component.get("custom_id")
+        assert id in id_list
+        if id == "button_stop_server":
+            assert component.get("disabled") is True
+        if id == "button_start_server":
+            assert component.get("disabled") is True
+        if id == "button_refresh_menu":
+            assert component.get("disabled") is False
     vsig.assert_called_once_with(event)
     if component_name == Components.STOP_SERVER:
         parameters[4]["ParameterValue"] = "Stopped"
     if component_name == Components.START_SERVER:
         parameters[4]["ParameterValue"] = "Running"
+    assert "Success" in response.get("data").get("content")
     assert client().update_stack.call_args.kwargs.get("Parameters") == parameters
+
+
+@patch("lambda_handler.verify_signature")
+def test_refresh_menu(vsig):
+    event = (
+        incoming_packet(PacketType.COMPONENT)
+        .with_component_name("button_refresh_menu")
+        .get_output()
+    )
+    # TODO assert lambda_handler returns correct value later
+    response = lambda_handler.lambda_handler(event, "")
+    assert_response_is_valid(response, ResponseType.COMPONENT_MESSAGE)
+    vsig.assert_called_once_with(event)
+
+
+@patch("lambda_handler.verify_signature")
+def test_invalid_user(vsig):
+    event = (
+        incoming_packet(PacketType.COMPONENT)
+        .with_component_name("button_refresh_menu")
+        .with_user()
+        .get_output()
+    )
+    response = lambda_handler.lambda_handler(event, "")
+    assert_response_is_valid(response, ResponseType.MESSAGE)
+    assert "don't have permission" in response.get("data").get("content")
+    vsig.assert_called_once_with(event)

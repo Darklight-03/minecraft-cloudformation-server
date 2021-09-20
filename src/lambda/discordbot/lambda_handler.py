@@ -1,8 +1,9 @@
 import os
 
 from nacl.signing import VerifyKey
+from lib.response import MessageResponse, ResponseType
 
-from lib.blep import ServerMenu, ServerState
+from lib.blep import ServerMenu, SetServerState
 from lib.request import Commands, Components, Request
 from lib.response import GenericResponse
 
@@ -29,22 +30,32 @@ def lambda_handler(event, context):
     except Exception as e:
         raise Exception(f"[UNAUTHORIZED] Invalid request signature: {e}")
 
-    # check if message is a ping
     request = Request(event.get("body-json"))
+    response = ""
 
+    # check if message is a ping
     if request.is_ping():
         return GenericResponse.PONG_RESPONSE
 
     if request.is_app_command():
         if request.get_command() == Commands.BLEP:
-            return ServerMenu(request).run()
+            response = ServerMenu(ResponseType.MESSAGE).run()
 
     if request.is_component_interaction():
-        if request.get_component() == Components.START_SERVER:
-            return ServerState(request).run()
-        if request.get_component() == Components.STOP_SERVER:
-            return ServerState(request).run()
-
-    raise Exception(
-        f"[INVALID_INPUT] Unrecognized request body: {event.get('body-json')}"
-    )
+        if request.user.get("id") != "105165905075396608":
+            response = MessageResponse(
+                ResponseType.MESSAGE,
+                f"You don't have permission, {request.user.get('username')}",
+            ).get_response()
+        elif request.get_component() == Components.START_SERVER:
+            response = SetServerState(request).run()
+        elif request.get_component() == Components.STOP_SERVER:
+            response = SetServerState(request).run()
+        elif request.get_component() == Components.REFRESH_MENU:
+            response = ServerMenu(ResponseType.COMPONENT_MESSAGE).run()
+    if response == "":
+        raise Exception(
+            f"[INVALID_INPUT] Unrecognized request body: {event.get('body-json')}"
+        )
+    print(f"returning {response}")
+    return response

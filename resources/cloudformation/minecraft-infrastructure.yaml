@@ -631,6 +631,7 @@ Resources:
       Environment:
         Variables:
           PublicKey: !Sub ${DiscordPublicKey}
+          STACK_NAME: !Sub ${AWS::StackName}
   
   ServerStopper:
     Type: AWS::Lambda::Function
