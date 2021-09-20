@@ -232,9 +232,17 @@ def test_server_menu(vsig):
 @patch("boto3.client")
 @patch("lambda_handler.verify_signature")
 @pytest.mark.parametrize(
+    "error_message",
+    [
+        "is in UPDATE_IN_PROGRESS state",
+        "No updates are to be performed",
+        "Unhandled ValidationException",
+    ],
+)
+@pytest.mark.parametrize(
     "component_name", ["button_start_server", "button_stop_server"]
 )
-def test_start_server_validation_error(vsig, client, component_name):
+def test_start_server_validation_error(vsig, client, component_name, error_message):
     parameters = [
         {"ParameterKey": v, "ParameterValue": v}
         for v in [
@@ -250,7 +258,7 @@ def test_start_server_validation_error(vsig, client, component_name):
         "Stacks": [{"Parameters": deepcopy(parameters)}]
     }
     client().update_stack.side_effect = ClientError(
-        error_response={"Error": {"Code": "ValidationError", "Message": "message"}},
+        error_response={"Error": {"Code": "ValidationError", "Message": error_message}},
         operation_name="operation",
     )
 
@@ -278,7 +286,7 @@ def test_start_server_validation_error(vsig, client, component_name):
             assert component.get("disabled") is True
         else:
             assert component.get("disabled") is not True
-    assert "ValidationError" in response.get("data").get("content")
+    assert response.get("data").get("content") is not None
     vsig.assert_called_once_with(event)
 
 
@@ -336,7 +344,7 @@ def test_start_server(vsig, client, component_name):
         parameters[4]["ParameterValue"] = "Stopped"
     if component_name == Components.START_SERVER:
         parameters[4]["ParameterValue"] = "Running"
-    assert "Success" in response.get("data").get("content")
+    assert "Server is currently changing to" in response.get("data").get("content")
     assert client().update_stack.call_args.kwargs.get("Parameters") == parameters
 
 

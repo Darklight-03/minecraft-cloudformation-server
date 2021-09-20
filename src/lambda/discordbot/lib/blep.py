@@ -59,11 +59,17 @@ class SetServerState:
         return (
             self.response.withDisabledStart()
             .withDisabledStop()
-            .withContent(self.output)
+            .withContent(
+                f"Server is currently changing to {self.desired_state} status..."
+            )
             .run()
         )
 
     def get_validation_error(self):
+        if "is in UPDATE_IN_PROGRESS state" in self.output:
+            self.output = "Server is still loading, please wait for it to start/stop."
+        elif "No updates are to be performed" in self.output:
+            self.output = f"Server is already in state {self.desired_state}."
         if self.desired_state == ServerState.RUNNING:
             return self.response.withDisabledStart().withContent(self.output).run()
         else:
