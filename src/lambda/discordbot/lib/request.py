@@ -21,6 +21,7 @@ class Components:
     REFRESH_MENU = "button_refresh_menu"
 
 
+# https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-interaction-structure
 class Request:
     def __init__(self, input):
         self.id = input.get("id")

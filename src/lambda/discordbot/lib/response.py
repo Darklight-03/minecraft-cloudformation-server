@@ -16,6 +16,7 @@ class GenericResponse:
     PONG_RESPONSE = {"type": ResponseType.PONG}
 
 
+# https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-interaction-response-structure
 class MessageResponse:
     def __init__(self, type, content) -> None:
         self.type = type

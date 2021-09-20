@@ -5,7 +5,7 @@ class ComponentType:
     MENU = 3
 
 
-# Components
+# https://discord.com/developers/docs/interactions/message-components#action-rows
 class ComponentRow:
     def __init__(self):
         self.components = []
@@ -31,6 +31,7 @@ class ButtonStyle:
     LINK = 5
 
 
+# https://discord.com/developers/docs/interactions/message-components#buttons
 class Button:
     def __init__(self, style, label="", emoji="", id="", disabled=""):
         self.style = style
