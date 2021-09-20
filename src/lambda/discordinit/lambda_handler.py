@@ -22,4 +22,5 @@ def lambda_handler(event, context):
 
     headers = {"Authorization": f"Bot {BOT_TOKEN}"}
 
-    requests.post(url, headers=headers, json=json)
+    r = requests.put(url, headers=headers, json=json)
+    return (r.status_code, r.text)
