@@ -36,43 +36,9 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: Setup Environment
         run: |
-          # install global requirements and create build folder
-          pip install -r requirements.txt > /dev/null 2>&1
-          mkdir build
-
-          # install requirements for each function
-          for D in src/lambda/*; do
-              if [ -d "${D}" ]; then
-                  function_name=$(basename "${D}")
-                  echo "Installing ${function_name} requirements" 
-                  pip install -r "${D}/requirements.txt" > /dev/null 2>&1
-              fi
-          done
+          ./install
 
 
-      - name: Build
+      - name: Build and Test
         run: |
-          for D in src/lambda/*; do
-              if [ -d "${D}" ]; then
-                  function_name=$(basename "${D}")
-                  echo "Copying ${function_name} to build/" 
-                  cp -r "${D}/" "build/${function_name}"
-              fi
-          done
-
-          # copy tests
-          for D in tst/lambda/*; do
-              if [ -d "${D}" ]; then
-                  function_name=$(basename "${D}")
-                  echo "copying ${function_name} tests" 
-                  cp -r "${D}"/* "build/${function_name}"
-              fi
-          done
-
-      - name: Test
-        run: |
-          echo "executing tests"
-          cd build || exit
-          coverage run --rcfile='../.coveragerc' -m pytest || { echo "tests failed, exiting" ; exit 1; }
-          coverage report --rcfile='../.coveragerc' || exit 1
-          cd .. || exit
+          ./test
