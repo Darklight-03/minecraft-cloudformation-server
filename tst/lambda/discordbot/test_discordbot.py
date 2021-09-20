@@ -240,6 +240,7 @@ def test_server_menu(vsig, client):
         "is in UPDATE_IN_PROGRESS state",
         "No updates are to be performed",
         "Unhandled ValidationException",
+        "Unhandled Exception",
     ],
 )
 @pytest.mark.parametrize(
@@ -260,8 +261,12 @@ def test_start_server_validation_error(vsig, client, component_name, error_messa
     client().describe_stacks.return_value = {
         "Stacks": [{"Parameters": deepcopy(parameters)}]
     }
+    code = "ValidationError"
+    # for now test this here too since we have same logic
+    if error_message == "Unhandled Exception":
+        code = "OtherError"
     client().update_stack.side_effect = ClientError(
-        error_response={"Error": {"Code": "ValidationError", "Message": error_message}},
+        error_response={"Error": {"Code": code, "Message": error_message}},
         operation_name="operation",
     )
 
@@ -279,7 +284,7 @@ def test_start_server_validation_error(vsig, client, component_name, error_messa
     response = lambda_handler.lambda_handler(event, "")
     assert_response_is_valid(response, ResponseType.COMPONENT_MESSAGE)
 
-    # Assert start and stop are disabled on success
+    # Assert start and stop are disabled at correct times
     components = response["data"]["components"][0]["components"]
     id_list = ["button_stop_server", "button_start_server", "button_refresh_menu"]
     for component in components:
@@ -287,9 +292,15 @@ def test_start_server_validation_error(vsig, client, component_name, error_messa
         assert id in id_list
         if id == component_name:
             assert component.get("disabled") is True
-        else:
+        elif (
+            error_message == "is in UPDATE_IN_PROGRESS state"
+            and id != "button_refresh_menu"
+        ):
+            assert component.get("disabled") is True
+        elif "Unhandled" not in error_message:
             assert component.get("disabled") is not True
-    assert response.get("data").get("content") is not None
+    if "Unhandled" in error_message:
+        assert error_message in response.get("data").get("content")
     vsig.assert_called_once_with(event)
 
 

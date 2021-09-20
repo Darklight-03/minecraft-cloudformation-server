@@ -69,17 +69,33 @@ class SetServerState:
     def get_validation_error(self):
         if "is in UPDATE_IN_PROGRESS state" in self.output:
             self.output = "Server is still loading, please wait for it to start/stop."
-        elif "No updates are to be performed" in self.output:
-            self.output = f"Server is already in state {self.desired_state}."
-        if self.desired_state == ServerState.RUNNING:
             return (
                 self.response.withDisabledStart()
+                .withDisabledStop()
                 .withContent(self.output)
                 .get_response()
             )
+        elif "No updates are to be performed" in self.output:
+            self.output = f"Server is already in state {self.desired_state}."
+            if self.desired_state == ServerState.RUNNING:
+                return (
+                    self.response.withDisabledStart()
+                    .withContent(self.output)
+                    .get_response()
+                )
+            else:
+                return (
+                    self.response.withDisabledStop()
+                    .withContent(self.output)
+                    .get_response()
+                )
         else:
+            # disable both buttons for unknown errors
             return (
-                self.response.withDisabledStop().withContent(self.output).get_response()
+                self.response.withDisabledStart()
+                .withDisabledStop()
+                .withContent(self.output)
+                .get_response()
             )
 
     def run(self):
@@ -87,6 +103,9 @@ class SetServerState:
         if self.output == "Success":
             return self.get_message_update_success()
         elif "ValidationError" in self.output:
+            return self.get_validation_error()
+        else:
+            # for now use validationerror for any error
             return self.get_validation_error()
 
 
