@@ -4,14 +4,14 @@
 ./clean
 
 # copy files into build folder
-for D in src/lambda/*; do
+for D in src/*; do
     if [ -d "${D}" ]; then
         function_name=$(basename "${D}")
         echo "Copying ${function_name} to build/" 
         cp -r "${D}/" "build/${function_name}"
     fi
 done
-for D in tst/lambda/*; do
+for D in tst/*; do
     if [ -d "${D}" ]; then
         function_name=$(basename "${D}")
         echo "copying ${function_name} tests" 

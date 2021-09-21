@@ -6,22 +6,19 @@ import requests
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=SyntaxWarning)
 
-WEBHOOK_URL = os.environ['WebhookUrl']
+WEBHOOK_URL = os.environ["WebhookUrl"]
 
 
 def lambda_handler(event, context):
     url = WEBHOOK_URL
     print(event)
-    data = {
-        "content": '',
-        "username": "INSTANCEMAN"
-    }
+    data = {"content": "", "username": "INSTANCEMAN"}
 
     data["embeds"] = [
         {
-            "description": 'HEY BITCHES THE SERVER IS UP',
+            "description": "HEY BITCHES THE SERVER IS UP",
             "title": "MINECRAFT",
-            "color": "3066993"
+            "color": "3066993",
         }
     ]
 

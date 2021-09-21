@@ -45,7 +45,7 @@ fi
 
 ### Package for deployment ###
 
-for D in src/lambda/*; do
+for D in src/*; do
     if [ -d "${D}" ]; then
         function_name=$(basename "${D}")
         echo "packaging ${function_name}" 
