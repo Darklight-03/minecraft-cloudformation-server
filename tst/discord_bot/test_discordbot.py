@@ -1,14 +1,14 @@
 from copy import deepcopy
-from tstlib.test_mock_objects import newDescribeStacks
+from discord_bot.tstlib.test_mock_objects import newDescribeStacks
 from unittest.mock import patch
 from botocore.exceptions import ClientError
 
-import lambda_handler
+import discord_bot.lambda_handler as lambda_handler
 import pytest
-from lib.server_menu import ServerState
-from lib.components import ComponentType
-from lib.request import Components, Request
-from lib.response import ResponseType
+from discord_bot.lib.server_menu import ServerState
+from discord_bot.lib.components import ComponentType
+from discord_bot.lib.request import Components, Request
+from discord_bot.lib.response import ResponseType
 
 ping_packet = {"type": 1}
 application_command_packet = {"type": 2}
@@ -162,7 +162,7 @@ def assert_response_is_valid(response, response_type):
         assert_data_is_valid(data, response_type)
 
 
-@patch("lambda_handler.VerifyKey")
+@patch("discord_bot.lambda_handler.VerifyKey")
 @patch.dict("os.environ", {"PublicKey": "cf8db450"})
 def test_verify_signature_fails(verify_key):
     verify_key().verify.side_effect = Exception()
@@ -184,7 +184,7 @@ def test_verify_signature_fails(verify_key):
     verify_key().verify.assert_called_once()
 
 
-@patch("lambda_handler.VerifyKey")
+@patch("discord_bot.lambda_handler.VerifyKey")
 @patch.dict("os.environ", {"PublicKey": "cf8db450"})
 def test_verify_signature(verify_key):
     lambda_handler.verify_signature(
@@ -202,7 +202,7 @@ def test_verify_signature(verify_key):
     verify_key().verify.assert_called_once()
 
 
-@patch("lambda_handler.verify_signature")
+@patch("discord_bot.lambda_handler.verify_signature")
 def test_invalid_request_type(vsig):
     event = incoming_packet(59).get_output()
     with pytest.raises(Exception) as excinfo:
@@ -211,7 +211,7 @@ def test_invalid_request_type(vsig):
     vsig.assert_called_once_with(event)
 
 
-@patch("lambda_handler.verify_signature")
+@patch("discord_bot.lambda_handler.verify_signature")
 def test_ping(vsig):
     event = incoming_packet(PacketType.PING).get_output()
     response = lambda_handler.lambda_handler(event, "")
@@ -221,7 +221,7 @@ def test_ping(vsig):
 
 @patch.dict("os.environ", {"STACK_NAME": "StackName"})
 @patch("boto3.client")
-@patch("lambda_handler.verify_signature")
+@patch("discord_bot.lambda_handler.verify_signature")
 def test_server_menu(vsig, client):
     client().describe_stacks.return_value = newDescribeStacks().output
     event = incoming_packet(PacketType.APP).with_name("menu").get_output()
@@ -233,7 +233,7 @@ def test_server_menu(vsig, client):
 
 @patch.dict("os.environ", {"STACK_NAME": "StackName"})
 @patch("boto3.client")
-@patch("lambda_handler.verify_signature")
+@patch("discord_bot.lambda_handler.verify_signature")
 @pytest.mark.parametrize(
     "error_message",
     [
@@ -306,7 +306,7 @@ def test_start_server_validation_error(vsig, client, component_name, error_messa
 
 @patch.dict("os.environ", {"STACK_NAME": "StackName"})
 @patch("boto3.client")
-@patch("lambda_handler.verify_signature")
+@patch("discord_bot.lambda_handler.verify_signature")
 @pytest.mark.parametrize(
     "component_name", ["button_start_server", "button_stop_server"]
 )
@@ -362,7 +362,7 @@ def test_start_server_success(vsig, client, component_name):
 
 @patch.dict("os.environ", {"STACK_NAME": "StackName"})
 @patch("boto3.client")
-@patch("lambda_handler.verify_signature")
+@patch("discord_bot.lambda_handler.verify_signature")
 @pytest.mark.parametrize("stack_status", ["UPDATE_COMPLETE", "UPDATE_IN_PROGRESS"])
 @pytest.mark.parametrize("server_state", [ServerState.STOPPED, ServerState.RUNNING])
 def test_refresh_menu(vsig, client, server_state, stack_status):
@@ -387,7 +387,7 @@ def test_refresh_menu(vsig, client, server_state, stack_status):
     vsig.assert_called_once_with(event)
 
 
-@patch("lambda_handler.verify_signature")
+@patch("discord_bot.lambda_handler.verify_signature")
 def test_invalid_user(vsig):
     event = (
         incoming_packet(PacketType.COMPONENT)

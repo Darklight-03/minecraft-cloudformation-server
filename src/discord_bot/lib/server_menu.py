@@ -4,9 +4,9 @@ import warnings
 from datetime import datetime
 
 from botocore.exceptions import ClientError
-from lib.components import Button, ButtonStyle
-from lib.request import Components
-from lib.response import MessageResponse, ResponseType
+from discord_bot.lib.components import Button, ButtonStyle
+from discord_bot.lib.request import Components
+from discord_bot.lib.response import MessageResponse, ResponseType
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=SyntaxWarning)

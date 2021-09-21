@@ -49,7 +49,8 @@ for D in src/*; do
     if [ -d "${D}" ]; then
         function_name=$(basename "${D}")
         echo "packaging ${function_name}" 
-        pip3 install -r "build/${function_name}/requirements.txt" -t "build/${function_name}/." > /dev/null 2>&1
+        pip3 install -r "build/${function_name}/${function_name}/requirements.txt" -t "build/${function_name}/." > /dev/null 2>&1
+        mv "build/${function_name}/${function_name}/lambda_handler.py" "build/${function_name}/lambda_handler.py" > /dev/null 2>&1
     fi
 done
 

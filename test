@@ -8,14 +8,15 @@ for D in src/*; do
     if [ -d "${D}" ]; then
         function_name=$(basename "${D}")
         echo "Copying ${function_name} to build/" 
-        cp -r "${D}/" "build/${function_name}"
+        mkdir "build/${function_name}" > /dev/null 2>&1
+        cp -r "${D}/" "build/${function_name}/${function_name}" > /dev/null 2>&1
     fi
 done
 for D in tst/*; do
     if [ -d "${D}" ]; then
         function_name=$(basename "${D}")
         echo "copying ${function_name} tests" 
-        cp -r "${D}"/* "build/${function_name}"
+        cp -r "${D}"/* "build/${function_name}/${function_name}" > /dev/null 2>&1
     fi
 done
 

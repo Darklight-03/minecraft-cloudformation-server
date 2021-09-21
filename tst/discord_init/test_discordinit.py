@@ -1,7 +1,7 @@
 from unittest.mock import ANY, patch
 
 with patch("os.environ") as environ:
-    from discordinit import lambda_handler
+    from discord_init import lambda_handler
 
 
 @patch("requests.put")

@@ -1,8 +1,8 @@
 [run]
 source = 
-    discordbot
-    discordinit
-    discordnotifier
+    discord_bot
+    discord_init
+    discord_notifier
 omit = 
     */test*
 

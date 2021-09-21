@@ -1,4 +1,4 @@
-from lib.server_menu import ServerState
+from discord_bot.lib.server_menu import ServerState
 
 
 class newDescribeStacks:

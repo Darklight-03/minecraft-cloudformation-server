@@ -2,7 +2,7 @@ from unittest.mock import ANY, patch
 import requests
 
 with patch("os.environ") as environ:
-    from discordnotifier import lambda_handler
+    from discord_notifier import lambda_handler
 
 expected_message = {
     "content": "",

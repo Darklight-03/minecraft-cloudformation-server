@@ -1,11 +1,11 @@
 import os
 
 from nacl.signing import VerifyKey
-from lib.response import MessageResponse, ResponseType
+from discord_bot.lib.response import MessageResponse, ResponseType
 
-from lib.server_menu import ServerMenu, SetServerState
-from lib.request import Commands, Components, Request
-from lib.response import GenericResponse
+from discord_bot.lib.server_menu import ServerMenu, SetServerState
+from discord_bot.lib.request import Commands, Components, Request
+from discord_bot.lib.response import GenericResponse
 
 
 # VERIFICATION

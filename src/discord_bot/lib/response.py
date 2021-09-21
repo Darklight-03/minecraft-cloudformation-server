@@ -1,4 +1,4 @@
-from lib.components import ComponentRow
+from discord_bot.lib.components import ComponentRow
 
 
 # response types we can send
