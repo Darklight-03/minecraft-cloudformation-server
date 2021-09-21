@@ -45,14 +45,18 @@ fi
 
 ### Package for deployment ###
 
+# reclean and update so files aren't modified by pytest
+echo "Cleaning up tests"
+./clean
 
 for D in src/*; do
     if [ -d "${D}" ]; then
         function_name=$(basename "${D}")
         echo "packaging ${function_name}"
         # do some fucked shit to get lambda to be able to import all the files
-        mkdir "build/${function_name}/${function_name}" > /dev/null 2>&1
+        mkdir "build/${function_name}" > /dev/null 2>&1
         mv "build/${function_name}"/* "build/${function_name}/${function_name}" > /dev/null 2>&1
+        cp -r "${D}/" "build/${function_name}/${function_name}" > /dev/null 2>&1
         mv "build/${function_name}/${function_name}/lambda_handler.py" "build/${function_name}/lambda_handler.py" > /dev/null 2>&1
 
         # install dependencies into lambda package
