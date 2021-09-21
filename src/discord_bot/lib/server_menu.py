@@ -154,7 +154,11 @@ class ServerMenu:
         return self.menu.get_response()
 
     def run(self):
-        if self.stack_status not in ["UPDATE_COMPLETE", "CREATE_COMPLETE"]:
+        if self.stack_status not in [
+            "UPDATE_COMPLETE",
+            "CREATE_COMPLETE",
+            "UPDATE_ROLLBACK_COMPLETE",
+        ]:
             self.withDisabledStart().withDisabledStop()
             self.withContent(
                 f"Server is currently {ServerState.verb(self.current_state)}..."
