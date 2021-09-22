@@ -150,13 +150,13 @@ def assert_data_is_valid(data, response_type):
         assert key in valid_keys
         valid_keys.remove(key)
 
-    # must have content (remove this if we need one without content)
-    assert "content" not in valid_keys
     if "components" in data.keys():
         components = data["components"]
         assert type(data["components"]) is list
         for item in components:
             assert_component_row_is_valid(item)
+
+    # TODO assert embeds have all valid data
 
 
 def assert_response_is_valid(response, response_type):
@@ -352,11 +352,13 @@ def test_start_server_error(
 
     # when server can't start, the output should include that.
     if can_start == "False" and component_name == "button_start_server":
-        assert "not within the time" in response.get("data").get("content")
+        assert "not within the time" in response.get("data").get("embeds")[0].get(
+            "title"
+        )
 
     # when we don't have error specific logic the error itself should be the output
     elif "Unhandled" in error_message:
-        assert error_message in response.get("data").get("content")
+        assert error_message in response.get("data").get("embeds")[0].get("title")
 
     vsig.assert_called_once_with(event)
 
@@ -405,7 +407,9 @@ def test_start_server_success(vsig, client, component_name):
     )
 
     vsig.assert_called_once_with(event)
-    assert f"Server is currently {verb}" in response.get("data").get("content")
+    assert f"Server is currently {verb}" in response.get("data").get("embeds")[0].get(
+        "title"
+    )
     desired_parameters = (
         newDescribeStacks(server_state=state).output.get("Stacks")[-1].get("Parameters")
     )
@@ -433,11 +437,11 @@ def test_refresh_menu(vsig, client, server_state, stack_status):
     if stack_status == "UPDATE_COMPLETE":
         assert f"Server is currently {server_state.lower()}" in response.get(
             "data"
-        ).get("content")
+        ).get("embeds")[0].get("title")
     else:
         assert f"Server is currently {ServerState.verb(server_state)}" in response.get(
             "data"
-        ).get("content")
+        ).get("embeds")[0].get("title")
     vsig.assert_called_once_with(event)
 
 
@@ -462,8 +466,12 @@ def test_refresh_menu_has_time_embed(vsig, client, can_start):
         assert any("available to start at" in e["description"] for e in embeds)
 
 
+@patch.dict("os.environ", {"STACK_NAME": "StackName"})
+@patch("boto3.client")
 @patch("discord_bot.lambda_handler.verify_signature")
-def test_invalid_user(vsig):
+def test_invalid_user(vsig, client):
+    client().get_parameter.return_value = Parameter("True")
+    client().describe_stacks.return_value = newDescribeStacks().output
     event = (
         incoming_packet(PacketType.COMPONENT)
         .with_component_name("button_refresh_menu")
@@ -471,6 +479,8 @@ def test_invalid_user(vsig):
         .get_output()
     )
     response = lambda_handler.lambda_handler(event, "")
-    assert_response_is_valid(response, ResponseType.MESSAGE)
-    assert "don't have permission" in response.get("data").get("content")
+    assert_response_is_valid(response, ResponseType.COMPONENT_MESSAGE)
+    assert any(
+        "don't have permission" in e["description"] for e in response["data"]["embeds"]
+    )
     vsig.assert_called_once_with(event)

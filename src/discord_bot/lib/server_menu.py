@@ -6,9 +6,8 @@ from botocore.exceptions import ClientError
 from discord_bot.lib.components import Button, ButtonStyle
 from discord_bot.lib.request import Components
 from discord_bot.lib.response import (
-    BasicEmbed,
     EmbedColor,
-    MessageResponse,
+    MenuResponse,
     ResponseType,
 )
 
@@ -76,7 +75,7 @@ class SetServerState:
 
     def get_message_update_success(self):
         self.response.withDisabledStart().withDisabledStop()
-        self.response.withContent(
+        self.response.withTitle(
             f"Server is currently {ServerState.verb(self.desired_state)}..."
         )
         return self.response.get_response()
@@ -87,7 +86,7 @@ class SetServerState:
             return (
                 self.response.withDisabledStart()
                 .withDisabledStop()
-                .withContent(self.output)
+                .withTitle(self.output)
                 .get_response()
             )
         elif "No updates are to be performed" in self.output:
@@ -95,13 +94,13 @@ class SetServerState:
             if self.desired_state == ServerState.RUNNING:
                 return (
                     self.response.withDisabledStart()
-                    .withContent(self.output)
+                    .withTitle(self.output)
                     .get_response()
                 )
             else:
                 return (
                     self.response.withDisabledStop()
-                    .withContent(self.output)
+                    .withTitle(self.output)
                     .get_response()
                 )
         else:
@@ -109,7 +108,7 @@ class SetServerState:
             return (
                 self.response.withDisabledStart()
                 .withDisabledStop()
-                .withContent(self.output)
+                .withTitle(self.output)
                 .get_response()
             )
 
@@ -158,15 +157,15 @@ class ServerMenu:
         self.menu.component_rows[0].get_component("button_stop_server").disabled = True
         return self
 
-    def withContent(self, content):
-        self.menu.content = content
+    def withTitle(self, title):
+        self.menu.embed.with_title(title)
         return self
 
     def get_response(self):
         return self.menu.get_response()
 
     def init_menu(self, type):
-        self.menu = MessageResponse(
+        self.menu = MenuResponse(
             type, f"Server is currently {self.current_state.lower()}"
         )
         self.menu.add_component_row()
@@ -186,6 +185,11 @@ class ServerMenu:
 
     def add_embed(self, embed):
         self.menu.add_embed(embed)
+        return self
+
+    def set_embed_data(self, description, color):
+        self.menu.embed.with_description(description)
+        self.menu.embed.with_color(color)
 
     def get_next_start_time(self):
         return f"(not yet implemented {datetime.now()})"
@@ -195,19 +199,15 @@ class ServerMenu:
 
     def add_embeds(self):
         if self.can_start:
-            self.add_embed(
-                BasicEmbed(
-                    "(Server will be available until " f"{self.get_next_stop_time()})",
-                    EmbedColor.RED,
-                )
+            self.set_embed_data(
+                "it will be available until " f"{self.get_next_stop_time()}",
+                EmbedColor.GREEN,
             )
         else:
-            self.add_embed(
-                BasicEmbed(
-                    "(Server will next be available to start at "
-                    f"{self.get_next_start_time()})",
-                    EmbedColor.RED,
-                )
+            self.set_embed_data(
+                "it will next be available to start at "
+                f"{self.get_next_start_time()}",
+                EmbedColor.RED,
             )
 
     def fetch_menu_update(self):
@@ -221,7 +221,7 @@ class ServerMenu:
             "UPDATE_ROLLBACK_COMPLETE",
         ]:
             self.withDisabledStart().withDisabledStop()
-            self.withContent(
+            self.withTitle(
                 f"Server is currently {ServerState.verb(self.current_state)}..."
             )
         elif not self.can_start:
