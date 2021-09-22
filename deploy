@@ -72,6 +72,7 @@ response=${response,,}    # tolower
 if [[ "$response" =~ ^(yes|y)$ ]]
 then
     ### Deploy ###
+    aws cloudformation set-stack-policy --stack-name "${StackName}" --stack-policy-body "file://resources/cloudformation/stack-policy.json"
     aws cloudformation deploy --template-file build/packaged-template.yaml --stack-name "${StackName}" --region "${Region}" --capabilities CAPABILITY_IAM --parameter-overrides "${ParameterOverrides[@]}"
 else
     exit 0

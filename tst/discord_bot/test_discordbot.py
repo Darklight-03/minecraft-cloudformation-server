@@ -231,22 +231,30 @@ def test_server_menu(vsig, client):
     vsig.assert_called_once_with(event)
 
 
+# Next time this is modified please refactor component_name input into desired_state,
+# and map it to the component_name within the test later.. (or vice verse) asserting
+# something should happen when component_name == expected_component is not intuitive.
+#
+# also don't think this function should be testing so much at once.. its shorter than
+# 20 tests, but also more confusing
 @patch.dict("os.environ", {"STACK_NAME": "StackName"})
 @patch("boto3.client")
 @patch("discord_bot.lambda_handler.verify_signature")
+@pytest.mark.parametrize("can_start", ["True", "False"])
 @pytest.mark.parametrize(
     "error_message",
     [
         "is in UPDATE_IN_PROGRESS state",
         "No updates are to be performed",
-        "Unhandled ValidationException",
+        "Unhandled ValidationError",
         "Unhandled Exception",
     ],
 )
 @pytest.mark.parametrize(
     "component_name", ["button_start_server", "button_stop_server"]
 )
-def test_start_server_validation_error(vsig, client, component_name, error_message):
+def test_start_server_error(vsig, client, component_name, error_message, can_start):
+    client().get_parameter.return_value = can_start
     parameters = [
         {"ParameterKey": v, "ParameterValue": v}
         for v in [
@@ -284,23 +292,52 @@ def test_start_server_validation_error(vsig, client, component_name, error_messa
     response = lambda_handler.lambda_handler(event, "")
     assert_response_is_valid(response, ResponseType.COMPONENT_MESSAGE)
 
-    # Assert start and stop are disabled at correct times
     components = response["data"]["components"][0]["components"]
-    id_list = ["button_stop_server", "button_start_server", "button_refresh_menu"]
-    for component in components:
-        id = component.get("custom_id")
-        assert id in id_list
-        if id == component_name:
-            assert component.get("disabled") is True
-        elif (
-            error_message == "is in UPDATE_IN_PROGRESS state"
-            and id != "button_refresh_menu"
-        ):
-            assert component.get("disabled") is True
-        elif "Unhandled" not in error_message:
-            assert component.get("disabled") is not True
-    if "Unhandled" in error_message:
+    id_list = ["button_start_server", "button_stop_server", "button_refresh_menu"]
+
+    # order of components should never change
+    component_ids = list(map(lambda c: c.get("custom_id"), components))
+    assert component_ids == id_list
+
+    # none of the components should be enabled if they were selected
+    assert not any(
+        c.get("custom_id") == component_name and c.get("disabled") is False
+        for c in components
+    )
+
+    # when error is in this list, both state change buttons should be disabled (always)
+    if error_message in [
+        "is in UPDATE_IN_PROGRESS state",
+        "Unhandled ValidationError",
+        "Unhandled Exception",
+    ]:
+        assert all(
+            c.get("disabled") is True
+            for c in components
+            if c.get("custom_id") != "button_refresh_menu"
+        )
+
+    # when you try to change it to the current state, only the
+    # current state should be disabled (2 total enabled buttons)
+    # (unless outside time range)
+    elif error_message == "No updates are to be performed":
+        if can_start == "True":
+            assert sum(map(lambda c: c.get("disabled") is not True, components)) == 2
+        if can_start == "False" and component_name == "button_start_server":
+            assert all(
+                c.get("disabled") is True
+                for c in components
+                if c.get("custom_id") != "button_refresh_menu"
+            )
+
+    # when server can't start, the output should include that.
+    if can_start == "False" and component_name == "button_start_server":
+        assert "not within the time" in response.get("data").get("content")
+
+    # when we don't have error specific logic the error itself should be the output
+    elif "Unhandled" in error_message:
         assert error_message in response.get("data").get("content")
+
     vsig.assert_called_once_with(event)
 
 
@@ -311,6 +348,7 @@ def test_start_server_validation_error(vsig, client, component_name, error_messa
     "component_name", ["button_start_server", "button_stop_server"]
 )
 def test_start_server_success(vsig, client, component_name):
+    client().get_parameter.return_value = "True"
     if component_name == Components.STOP_SERVER:
         verb = "stopping"
         state = ServerState.STOPPED

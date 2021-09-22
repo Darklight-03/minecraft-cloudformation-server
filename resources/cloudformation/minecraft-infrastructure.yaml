@@ -698,6 +698,16 @@ Resources:
         Variables:
           ApplicationId: !Sub ${DiscordApplicationId}
           BotToken: !Sub ${DiscordBotToken}
+
+  CanStartParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      AllowedPattern: (True|False)
+      Name: CanStart
+      Description: Whether the minecraft server is allowed to start
+      Tier: Standard
+      Type: String
+      Value: "True"
       
   EventRule:
     Type: AWS::Events::Rule
