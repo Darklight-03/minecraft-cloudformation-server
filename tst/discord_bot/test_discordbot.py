@@ -1,14 +1,14 @@
-from copy import deepcopy
-from discord_bot.tstlib.test_mock_objects import newDescribeStacks
 from unittest.mock import patch
+
+import pytest
 from botocore.exceptions import ClientError
 
 import discord_bot.lambda_handler as lambda_handler
-import pytest
-from discord_bot.lib.server_menu import ServerState
 from discord_bot.lib.components import ComponentType
 from discord_bot.lib.request import Components, Request
 from discord_bot.lib.response import ResponseType
+from discord_bot.lib.server_menu import ServerState
+from discord_bot.tstlib.test_mock_objects import newDescribeStacks
 
 ping_packet = {"type": 1}
 application_command_packet = {"type": 2}
@@ -242,9 +242,15 @@ def test_server_menu(vsig, client):
 #
 # also don't think this function should be testing so much at once.. its shorter than
 # 20 tests, but also more confusing
+#
+# ok we are up to 64 tests in this one function....
+# it needs to be split in to one function per error type next time I touch it.
+# I made it a bit more readable at least this time.
 @patch.dict("os.environ", {"STACK_NAME": "StackName"})
 @patch("boto3.client")
 @patch("discord_bot.lambda_handler.verify_signature")
+@pytest.mark.parametrize("stack_status", ["UPDATE_IN_PROGRESS", "UPDATE_COMPLETE"])
+@pytest.mark.parametrize("current_state", [ServerState.RUNNING, ServerState.STOPPED])
 @pytest.mark.parametrize("can_start", ["True", "False"])
 @pytest.mark.parametrize(
     "error_message",
@@ -258,22 +264,36 @@ def test_server_menu(vsig, client):
 @pytest.mark.parametrize(
     "component_name", ["button_start_server", "button_stop_server"]
 )
-def test_start_server_error(vsig, client, component_name, error_message, can_start):
+def test_start_server_error(
+    vsig, client, component_name, error_message, can_start, current_state, stack_status
+):
+    # abandon pointless tests
+    if (
+        error_message == "is in UPDATE_IN_PROGRESS state"
+        and stack_status != "UPDATE_IN_PROGRESS"
+    ):
+        return
+    if (
+        error_message == "No updates are to be performed"
+        and stack_status == "UPDATE_IN_PROGRESS"
+    ):
+        return
+    button_state = (
+        ServerState.RUNNING
+        if component_name != "button_start_server"
+        else ServerState.STOPPED
+    )
+    if (
+        error_message == "No updates are to be performed"
+        and current_state == button_state
+    ):
+        return
+
     client().get_parameter.return_value = Parameter(can_start)
-    parameters = [
-        {"ParameterKey": v, "ParameterValue": v}
-        for v in [
-            "param1",
-            "param2",
-            "param3",
-            "param4",
-            "ServerState",
-            "param5",
-        ]
-    ]
-    client().describe_stacks.return_value = {
-        "Stacks": [{"Parameters": deepcopy(parameters)}]
-    }
+    client().describe_stacks.return_value = newDescribeStacks(
+        server_state=current_state,
+        stack_status=stack_status,
+    ).output
     code = "ValidationError"
     # for now test this here too since we have same logic
     if error_message == "Unhandled Exception":
@@ -286,12 +306,7 @@ def test_start_server_error(vsig, client, component_name, error_message, can_sta
     event = (
         incoming_packet(PacketType.COMPONENT)
         .with_component_name(component_name)
-        .with_message(
-            {
-                "content": "some_message",
-                "components": [new_row([new_button("start"), new_button("stop")])],
-            }
-        )
+        .with_message({"content": "some_message"})
         .get_output()
     )
     response = lambda_handler.lambda_handler(event, "")
@@ -383,16 +398,12 @@ def test_start_server_success(vsig, client, component_name):
 
     # Assert start and stop are disabled on success
     components = response["data"]["components"][0]["components"]
-    id_list = ["button_stop_server", "button_start_server", "button_refresh_menu"]
-    for component in components:
-        id = component.get("custom_id")
-        assert id in id_list
-        if id == "button_stop_server":
-            assert component.get("disabled") is True
-        if id == "button_start_server":
-            assert component.get("disabled") is True
-        if id == "button_refresh_menu":
-            assert component.get("disabled") is False
+    assert all(
+        c.get("disabled") is True
+        for c in components
+        if c.get("custom_id") != "button_refresh_menu"
+    )
+
     vsig.assert_called_once_with(event)
     assert f"Server is currently {verb}" in response.get("data").get("content")
     desired_parameters = (
@@ -428,6 +439,27 @@ def test_refresh_menu(vsig, client, server_state, stack_status):
             "data"
         ).get("content")
     vsig.assert_called_once_with(event)
+
+
+@patch.dict("os.environ", {"STACK_NAME": "StackName"})
+@patch("boto3.client")
+@patch("discord_bot.lambda_handler.verify_signature")
+@pytest.mark.parametrize("can_start", ["True", "False"])
+def test_refresh_menu_has_time_embed(vsig, client, can_start):
+    client().get_parameter.return_value = Parameter(can_start)
+    client().describe_stacks.return_value = newDescribeStacks().output
+    event = (
+        incoming_packet(PacketType.COMPONENT)
+        .with_component_name("button_refresh_menu")
+        .get_output()
+    )
+    response = lambda_handler.lambda_handler(event, "")
+    assert_response_is_valid(response, ResponseType.COMPONENT_MESSAGE)
+    embeds = response["data"]["embeds"]
+    if can_start == "True":
+        assert any("available until" in e["description"] for e in embeds)
+    else:
+        assert any("available to start at" in e["description"] for e in embeds)
 
 
 @patch("discord_bot.lambda_handler.verify_signature")

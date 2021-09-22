@@ -1,12 +1,16 @@
 import os
 import warnings
-
 from datetime import datetime
 
 from botocore.exceptions import ClientError
 from discord_bot.lib.components import Button, ButtonStyle
 from discord_bot.lib.request import Components
-from discord_bot.lib.response import MessageResponse, ResponseType
+from discord_bot.lib.response import (
+    BasicEmbed,
+    EmbedColor,
+    MessageResponse,
+    ResponseType,
+)
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=SyntaxWarning)
@@ -122,31 +126,28 @@ class SetServerState:
 
 class ServerMenu:
     def __init__(self, type):
-        self.cfn = boto3.client("cloudformation")
-        self.stack = self.cfn.describe_stacks(
-            StackName=os.environ.get("STACK_NAME")
-        ).get("Stacks")[-1]
+        self.update_stack_status()
+        self.update_can_start()
+        self.init_menu(type)
+        self.fetch_menu_update()
+
+    def update_stack_status(self):
+        cfn = boto3.client("cloudformation")
+        stack = cfn.describe_stacks(StackName=os.environ.get("STACK_NAME")).get(
+            "Stacks"
+        )[-1]
+
         self.current_state = [
             parameter.get("ParameterValue")
-            for parameter in self.stack.get("Parameters")
+            for parameter in stack.get("Parameters")
             if parameter.get("ParameterKey") == "ServerState"
         ][0]
-        self.stack_status = self.stack.get("StackStatus")
-        self.menu = MessageResponse(type, f"Test Message {str(datetime.now())}")
-        self.menu.add_component_row()
-        self.menu.component_rows[0].add_component(
-            Button(ButtonStyle.SUCCESS, label="Start", id="button_start_server")
-        )
-        self.menu.component_rows[0].add_component(
-            Button(ButtonStyle.DANGER, label="Stop", id="button_stop_server")
-        )
-        self.menu.component_rows[0].add_component(
-            Button(
-                ButtonStyle.SECONDARY,
-                label="Refresh",
-                id="button_refresh_menu",
-                disabled=False,
-            )
+        self.stack_status = stack.get("StackStatus")
+
+    def update_can_start(self):
+        ssm = boto3.client("ssm")
+        self.can_start = (
+            ssm.get_parameter(Name="CanStart").get("Parameter").get("Value") == "True"
         )
 
     def withDisabledStart(self):
@@ -164,7 +165,56 @@ class ServerMenu:
     def get_response(self):
         return self.menu.get_response()
 
-    def run(self):
+    def init_menu(self, type):
+        self.menu = MessageResponse(
+            type, f"Server is currently {self.current_state.lower()}"
+        )
+        self.menu.add_component_row()
+        self.menu.component_rows[0].add_component(
+            Button(ButtonStyle.SUCCESS, label="Start", id="button_start_server")
+        )
+        self.menu.component_rows[0].add_component(
+            Button(ButtonStyle.DANGER, label="Stop", id="button_stop_server")
+        )
+        self.menu.component_rows[0].add_component(
+            Button(
+                ButtonStyle.SECONDARY,
+                label="Refresh",
+                id="button_refresh_menu",
+            )
+        )
+
+    def add_embed(self, embed):
+        self.menu.add_embed(embed)
+
+    def get_next_start_time(self):
+        return f"(not yet implemented {datetime.now()})"
+
+    def get_next_stop_time(self):
+        return f"(not yet implemented {datetime.now()})"
+
+    def add_embeds(self):
+        if self.can_start:
+            self.add_embed(
+                BasicEmbed(
+                    "(Server will be available until " f"{self.get_next_stop_time()})",
+                    EmbedColor.RED,
+                )
+            )
+        else:
+            self.add_embed(
+                BasicEmbed(
+                    "(Server will next be available to start at "
+                    f"{self.get_next_start_time()})",
+                    EmbedColor.RED,
+                )
+            )
+
+    def fetch_menu_update(self):
+        if self.current_state == ServerState.RUNNING:
+            self.withDisabledStart()
+        if self.current_state == ServerState.STOPPED:
+            self.withDisabledStop()
         if self.stack_status not in [
             "UPDATE_COMPLETE",
             "CREATE_COMPLETE",
@@ -174,10 +224,9 @@ class ServerMenu:
             self.withContent(
                 f"Server is currently {ServerState.verb(self.current_state)}..."
             )
-        else:
-            if self.current_state == ServerState.RUNNING:
-                self.withDisabledStart()
-            elif self.current_state == ServerState.STOPPED:
-                self.withDisabledStop()
-            self.withContent(f"Server is currently {self.current_state.lower()}")
+        elif not self.can_start:
+            self.withDisabledStart()
+        self.add_embeds()
+
+    def run(self):
         return self.menu.get_response()
