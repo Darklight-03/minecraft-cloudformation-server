@@ -15,6 +15,11 @@ application_command_packet = {"type": 2}
 component_packet = {"type": 3}
 
 
+class Parameter:
+    def __new__(self, value):
+        return {"Parameter": {"Value": value}}
+
+
 def new_row(components):
     return {"type": ComponentType.ROW, "components": components}
 
@@ -254,7 +259,7 @@ def test_server_menu(vsig, client):
     "component_name", ["button_start_server", "button_stop_server"]
 )
 def test_start_server_error(vsig, client, component_name, error_message, can_start):
-    client().get_parameter.return_value = can_start
+    client().get_parameter.return_value = Parameter(can_start)
     parameters = [
         {"ParameterKey": v, "ParameterValue": v}
         for v in [
@@ -348,7 +353,7 @@ def test_start_server_error(vsig, client, component_name, error_message, can_sta
     "component_name", ["button_start_server", "button_stop_server"]
 )
 def test_start_server_success(vsig, client, component_name):
-    client().get_parameter.return_value = "True"
+    client().get_parameter.return_value = Parameter("True")
     if component_name == Components.STOP_SERVER:
         verb = "stopping"
         state = ServerState.STOPPED

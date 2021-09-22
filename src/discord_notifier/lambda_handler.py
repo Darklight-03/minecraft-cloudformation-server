@@ -1,3 +1,4 @@
+import boto3
 import os
 import warnings
 
@@ -12,6 +13,7 @@ WEBHOOK_URL = os.environ["WebhookUrl"]
 def lambda_handler(event, context):
     url = WEBHOOK_URL
     print(event)
+
     data = {"content": "", "username": "INSTANCEMAN"}
 
     data["embeds"] = [
@@ -21,6 +23,18 @@ def lambda_handler(event, context):
             "color": "3066993",
         }
     ]
+    if "discord_message" in event.keys():
+        data["username"] = "Server Notifier"  # not sure if space allowed
+        data["content"] = event["discord_message"]
+        del data["embeds"]
+
+    if "desired_state" in event.keys():
+        boto3.client("ssm").put_parameter(
+            Name="CanStart",
+            Value="True" if event["desired_state"] == "Running" else "False",
+            Overwrite=True,
+            AllowedPattern="(True|False)",
+        )
 
     result = requests.post(url, json=data)
 

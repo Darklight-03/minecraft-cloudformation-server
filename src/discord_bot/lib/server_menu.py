@@ -36,7 +36,9 @@ class SetServerState:
         self.stack_name = os.environ.get("STACK_NAME")
         self.cfn = boto3.client("cloudformation")
         ssm = boto3.client("ssm")
-        self.can_start = ssm.get_parameter(Name="CanStart") == "True"
+        self.can_start = (
+            ssm.get_parameter(Name="CanStart").get("Parameter").get("Value") == "True"
+        )
         self.response = ServerMenu(ResponseType.COMPONENT_MESSAGE)
 
     # may want to do this in new lambda function if take too long (probably)
