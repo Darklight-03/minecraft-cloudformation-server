@@ -10,6 +10,26 @@ with warnings.catch_warnings():
 WEBHOOK_URL = os.environ["WebhookUrl"]
 
 
+def stop_server():
+    cfn = boto3.client("cloudformation")
+    stack_name = os.environ.get("STACK_NAME")
+    stack = cfn.describe_stacks(StackName=stack_name)
+
+    def set_state(x):
+        if x.get("ParameterKey") == "ServerState":
+            x["ParameterValue"] = "Stopped"
+        return x
+
+    stack_parameters = stack.get("Stacks")[-1].get("Parameters")
+    stack_parameters = list(map(set_state, stack_parameters))
+    cfn.update_stack(
+        StackName=stack_name,
+        UsePreviousTemplate=True,
+        Capabilities=["CAPABILITY_IAM"],
+        Parameters=stack_parameters,
+    )
+
+
 def lambda_handler(event, context):
     url = WEBHOOK_URL
     print(event)
@@ -35,6 +55,8 @@ def lambda_handler(event, context):
             Overwrite=True,
             AllowedPattern="(True|False)",
         )
+        if event["desired_state"] == "Stopped":
+            stop_server()
 
     result = requests.post(url, json=data)
 

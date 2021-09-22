@@ -1,3 +1,4 @@
+from discord_notifier.tstlib.test_mock_objects import newDescribeStacks
 from unittest.mock import ANY, patch, MagicMock
 import pytest
 import requests
@@ -51,6 +52,10 @@ class TestDiscordNotifier(object):
 
     @pytest.mark.parametrize("desired_state", ["Running", "Stopped"])
     def test_changes_server_state(self, desired_state):
+        MockBoto3Client().describe_stacks.return_value = newDescribeStacks(
+            server_state="Running"
+        ).output
+
         assert (
             lambda_handler.lambda_handler(Event().with_state(desired_state).value, "")
             == 0
@@ -63,6 +68,18 @@ class TestDiscordNotifier(object):
             AllowedPattern="(True|False)",
             Overwrite=True,
         )
+        desired_parameters = (
+            newDescribeStacks(server_state="Stopped")
+            .output.get("Stacks")[-1]
+            .get("Parameters")
+        )
+        if desired_state == "Stopped":
+            assert (
+                MockBoto3Client().update_stack.call_args.kwargs.get("Parameters")
+                == desired_parameters
+            )
+        else:
+            MockBoto3Client().update_stack.assert_not_called()
         MockPost().raise_for_status.assert_called_once()
 
     def test_delivers_custom_message(self):

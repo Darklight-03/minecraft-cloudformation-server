@@ -1,7 +1,11 @@
 import os
 
 from nacl.signing import VerifyKey
-from discord_bot.lib.response import MessageResponse, ResponseType
+from discord_bot.lib.response import (
+    BasicEmbed,
+    EmbedColor,
+    ResponseType,
+)
 
 from discord_bot.lib.server_menu import ServerMenu, SetServerState
 from discord_bot.lib.request import Commands, Components, Request
@@ -42,11 +46,24 @@ def lambda_handler(event, context):
             response = ServerMenu(ResponseType.MESSAGE).run()
 
     if request.is_component_interaction():
-        if request.user.get("id") != "105165905075396608":
-            response = MessageResponse(
-                ResponseType.MESSAGE,
-                f"You don't have permission, {request.user.get('username')}",
-            ).get_response()
+        if request.user.get(
+            "id"
+        ) != "105165905075396608" and request.get_component() not in [
+            "button_start_server"
+        ]:
+            response = (
+                ServerMenu(
+                    ResponseType.COMPONENT_MESSAGE,
+                )
+                .add_embed(
+                    BasicEmbed(
+                        f"You don't have permission to {request.get_component()}, "
+                        f"{request.user.get('username')}",
+                        EmbedColor.RED,
+                    )
+                )
+                .run()
+            )
         elif request.get_component() == Components.START_SERVER:
             response = SetServerState(request).run()
         elif request.get_component() == Components.STOP_SERVER:
