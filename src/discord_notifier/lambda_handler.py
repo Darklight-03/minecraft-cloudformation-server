@@ -1,6 +1,7 @@
 import boto3
 import os
 import warnings
+from botocore.exceptions import ClientError
 
 import requests
 
@@ -22,12 +23,15 @@ def stop_server():
 
     stack_parameters = stack.get("Stacks")[-1].get("Parameters")
     stack_parameters = list(map(set_state, stack_parameters))
-    cfn.update_stack(
-        StackName=stack_name,
-        UsePreviousTemplate=True,
-        Capabilities=["CAPABILITY_IAM"],
-        Parameters=stack_parameters,
-    )
+    try:
+        cfn.update_stack(
+            StackName=stack_name,
+            UsePreviousTemplate=True,
+            Capabilities=["CAPABILITY_IAM"],
+            Parameters=stack_parameters,
+        )
+    except ClientError as e:
+        print(e)
 
 
 def lambda_handler(event, context):
