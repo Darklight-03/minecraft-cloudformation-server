@@ -687,6 +687,7 @@ Resources:
       Environment:
         Variables:
           WebhookUrl: !Sub ${WebhookUrl}
+          STACK_NAME: !Sub ${AWS::StackName}
 
   # Lambda to register commands on discord bot (run once manually)
   DiscordInit:
