@@ -175,6 +175,14 @@ Parameters:
     Type: String
     Description: bucket where modpack.zip is located
 
+  StartScheduleCron:
+    Type: String
+    Description: Cron Schedule to start server
+
+  StopScheduleCron:
+    Type: String
+    Description: Cron Schedule to stop server
+
 # Not up to date
 Metadata:
   AWS::CloudFormation::Interface:
@@ -723,7 +731,33 @@ Resources:
       Targets:
         - Arn: !GetAtt DiscordNotifier.Arn
           Id: DiscordNotifier
-      
+
+  StartSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: !Sub cron${StartScheduleCron}
+      Targets:
+        - Arn: !GetAtt DiscordNotifier.Arn
+          Id: DiscordNotifier
+          Input: !Sub |
+            {
+              "discord_message": "Server can now be started. stop schedule is: ${StopScheduleCron}",
+              "desired_state": "Running"
+            }
+
+  StopSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: !Sub cron${StopScheduleCron}
+      Targets: 
+        - Arn: !GetAtt DiscordNotifier.Arn
+          Id: DiscordNotifier
+          Input: !Sub |
+            {
+              "discord_message": "Server is now stopping, start schedule is: ${StartScheduleCron}",
+              "desired_state": "Stopped"
+            }
+
   # ====================================================
   # INSTANCE CONFIG
   # ====================================================
