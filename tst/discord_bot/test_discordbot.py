@@ -474,13 +474,33 @@ def test_invalid_user(vsig, client):
     client().describe_stacks.return_value = newDescribeStacks().output
     event = (
         incoming_packet(PacketType.COMPONENT)
-        .with_component_name("button_refresh_menu")
+        .with_component_name("button_start_server")
         .with_user()
         .get_output()
     )
     response = lambda_handler.lambda_handler(event, "")
     assert_response_is_valid(response, ResponseType.COMPONENT_MESSAGE)
     assert any(
+        "don't have permission" in e["description"] for e in response["data"]["embeds"]
+    )
+    vsig.assert_called_once_with(event)
+
+
+@patch.dict("os.environ", {"STACK_NAME": "StackName"})
+@patch("boto3.client")
+@patch("discord_bot.lambda_handler.verify_signature")
+def test_invalid_user_can_stop(vsig, client):
+    client().get_parameter.return_value = Parameter("True")
+    client().describe_stacks.return_value = newDescribeStacks().output
+    event = (
+        incoming_packet(PacketType.COMPONENT)
+        .with_component_name("button_stop_server")
+        .with_user()
+        .get_output()
+    )
+    response = lambda_handler.lambda_handler(event, "")
+    assert_response_is_valid(response, ResponseType.COMPONENT_MESSAGE)
+    assert not any(
         "don't have permission" in e["description"] for e in response["data"]["embeds"]
     )
     vsig.assert_called_once_with(event)
