@@ -1,68 +1,37 @@
-import boto3
 import os
 import warnings
-from botocore.exceptions import ClientError
 
 import requests
+
+from discord_notifier.lib.message_handler import MessageHandler
+from discord_notifier.lib.parameter_client import Parameter
+from discord_notifier.lib.server_manager import ServerManager
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 WEBHOOK_URL = os.environ["WebhookUrl"]
-
-
-def stop_server():
-    cfn = boto3.client("cloudformation")
-    stack_name = os.environ.get("STACK_NAME")
-    stack = cfn.describe_stacks(StackName=stack_name)
-
-    def set_state(x):
-        if x.get("ParameterKey") == "ServerState":
-            x["ParameterValue"] = "Stopped"
-        return x
-
-    stack_parameters = stack.get("Stacks")[-1].get("Parameters")
-    stack_parameters = list(map(set_state, stack_parameters))
-    try:
-        cfn.update_stack(
-            StackName=stack_name,
-            UsePreviousTemplate=True,
-            Capabilities=["CAPABILITY_IAM"],
-            Parameters=stack_parameters,
-        )
-    except ClientError as e:
-        print(e)
+STACK_NAME = os.environ.get("STACK_NAME")
 
 
 def lambda_handler(event, context):
+    print(f"event {event}")
     url = WEBHOOK_URL
-    print(event)
+    stack_name = STACK_NAME
 
-    data = {"content": "", "username": "INSTANCEMAN"}
+    message_handler = MessageHandler()
 
-    data["embeds"] = [
-        {
-            "description": "HEY BITCHES THE SERVER IS UP",
-            "title": "MINECRAFT",
-            "color": "3066993",
-        }
-    ]
     if "discord_message" in event.keys():
-        data["username"] = "Server Notifier"  # not sure if space allowed
-        data["content"] = event["discord_message"]
-        del data["embeds"]
+        message_handler.set_message(event["discord_message"])
 
     if "desired_state" in event.keys():
-        boto3.client("ssm").put_parameter(
-            Name="CanStart",
-            Value="True" if event["desired_state"] == "Running" else "False",
-            Overwrite=True,
-            AllowedPattern="(True|False)",
-        )
-        if event["desired_state"] == "Stopped":
-            stop_server()
+        desired_state = event["desired_state"]
+        Parameter().set_canstart("True" if desired_state == "Running" else "False")
+        if desired_state == "Stopped":
+            cfn = ServerManager(stack_name)
+            cfn.stop_server()
 
-    result = requests.post(url, json=data)
+    result = requests.post(url, json=message_handler.message)
 
     try:
         result.raise_for_status()

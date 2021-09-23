@@ -1,4 +1,5 @@
 from discord_bot.lib.server_menu import ServerState
+from datetime import datetime
 
 
 class newDescribeStacks:
@@ -18,15 +19,27 @@ class newDescribeStacks:
                 return param
             return param
 
-        parameters = list(map(set_state, parameters))
+        self.parameters = list(map(set_state, parameters))
+        self.stack_name = stack_name
+        self.server_state = server_state
+        self.stack_id = stack_id
+        self.stack_status = stack_status
 
         self.output = {
             "Stacks": [
                 {
-                    "StackName": stack_name,
-                    "StackId": stack_id,
-                    "StackStatus": stack_status,
-                    "Parameters": parameters,
+                    "StackName": self.stack_name,
+                    "StackId": self.stack_id,
+                    "StackStatus": self.stack_status,
+                    "Parameters": self.parameters,
+                    "ChangeSetId": "string",
+                    "Description": "string",
+                    "CreationTime": datetime(2015, 1, 1),
+                    "DeletionTime": datetime(2015, 1, 1),
+                    "LastUpdatedTime": datetime(2015, 1, 1),
+                    "Capabilities": [
+                        "CAPABILITY_IAM",
+                    ],
                 }
             ]
         }

@@ -5,4 +5,3 @@ mock
 pylint
 pre-commit
 coverage
-pytest-socket

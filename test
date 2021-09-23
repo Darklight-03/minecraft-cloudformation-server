@@ -23,7 +23,7 @@ done
 
 echo "executing tests"
 cd build || exit
-coverage run --rcfile='../.coveragerc' -m pytest --disable-socket || { echo "tests failed, exiting" ; exit 1; }
+AWS_ACCESS_KEY_ID="foo" AWS_SECRET_ACCESS_KEY="bar" coverage run --rcfile='../.coveragerc' -m pytest || { echo "tests failed, exiting" ; exit 1; }
 coverage html
 coverage report --rcfile='../.coveragerc' || exit 1
 cd .. || exit
