@@ -25,6 +25,9 @@ def verify_signature(event):
     verify_key.verify(message, bytes.fromhex(auth_sig))
 
 
+ADMIN_ID = "105165905075396608"
+
+
 # CODE STARTS HERE
 def lambda_handler(event, context):
     print(f"event {event}")  # debug print
@@ -46,11 +49,10 @@ def lambda_handler(event, context):
             response = ServerMenu(ResponseType.MESSAGE).run()
 
     if request.is_component_interaction():
-        if request.user.get(
-            "id"
-        ) != "105165905075396608" and request.get_component() not in [
+        if request.user["id"] != ADMIN_ID and request.get_component() in [
             "button_start_server"
         ]:
+            # send invalid permission response if no perm
             response = (
                 ServerMenu(
                     ResponseType.COMPONENT_MESSAGE,
