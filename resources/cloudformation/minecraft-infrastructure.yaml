@@ -835,6 +835,61 @@ Resources:
         Ref: AWS::Region
       Size: 10
       VolumeType: gp3
+      Tags:
+        - Key: DoBackup
+          Value: 'True'
+
+  BackupPolicy:
+    Type: AWS::DLM::LifecyclePolicy
+    Properties:
+      Description: backs up minecraft server
+      ExecutionRoleArn: !GetAtt dlmRole.Arn
+      State: ENABLED
+      PolicyDetails:
+        PolicyType: EBS_SNAPSHOT_MANAGEMENT
+        ResourceLocations: [CLOUD]
+        ResourceTypes: [VOLUME]
+        Schedules:
+          - CopyTags: True
+            CreateRule: 
+              CronExpression: cron(0 12 ? * 1 *)
+            Name: Backup mc server every monday
+            RetainRule: 
+              Count: 3
+        TargetTags:
+          - Key: DoBackup
+            Value: 'True'
+
+  dlmRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /service-role/dlm/
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - dlm.amazonaws.com
+      Policies:
+        - PolicyName: "dlmPolicy"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:CreateSnapshot
+                  - ec2:CreateSnapshots
+                  - ec2:DeleteSnapshot
+                  - ec2:DescribeVolumes
+                  - ec2:DescribeInstances
+                  - ec2:DescribeSnapshots
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ec2:CreateTags
+                Resource: arn:aws:ec2:*::snapshot/*
 
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
