@@ -23,38 +23,32 @@ class GenericResponse:
 
 
 # https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-interaction-response-structure
-class MenuResponse:
-    def __init__(self, type, title) -> None:
+class Response:
+    def __init__(self, type) -> None:
         self.type = type
         self.component_rows = []
-        self.embed = Embed(title)
-        self.extra_embeds = []
+        self.embeds = []
 
     def add_component_row(self):
         self.component_rows.append(ComponentRow())
 
+    def add_embed(self, embed):
+        self.embeds.append(embed)
+
     def get_response(self):
-        response = {}
-        response["type"] = self.type
+        response = {"type": self.type}
         data = {}
         if len(self.component_rows) > 0:
-            data["components"] = list(map(lambda a: a.get_value(), self.component_rows))
+            data["components"] = list(map(lambda a: a.get_dict(), self.component_rows))
         data["embeds"] = [
-            self.embed.get_dict(),
-            *list(map(lambda a: a.get_dict(), self.extra_embeds)),
+            *list(map(lambda a: a.get_dict(), self.embeds)),
         ]
         response["data"] = data
         return response
 
-    # stored as dict
-    def add_embed(self, embed):
-        self.extra_embeds.append(embed)
 
-
+# https://discord.com/developers/docs/resources/channel#embed-object
 class Embed:
-    def __init__(self, title):
-        self.title = title
-
     def with_title(self, title):
         self.title = title
         return self
@@ -69,11 +63,3 @@ class Embed:
 
     def get_dict(self):
         return vars(self)
-
-
-# embed with only description and color
-# https://discord.com/developers/docs/resources/channel#embed-object
-class BasicEmbed:
-    # its a dict with fancy constructor
-    def __new__(self, description, color):
-        return Embed(None).with_description(description).with_color(color)

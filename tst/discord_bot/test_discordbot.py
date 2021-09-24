@@ -88,6 +88,8 @@ def test_component():
     assert Request(component_packet).is_component_interaction() is True
 
 
+# maybe assert that items are the correct data type, stopped working when emoji was ""
+# works fine when None is returned though so not too sure what is valid and what isn't
 def assert_component_is_valid(component):
     valid_button_keys = [
         "type",

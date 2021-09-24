@@ -13,14 +13,18 @@ class ComponentRow:
     def add_component(self, component):
         self.components.append(component)
 
-    def get_component(self, id):
-        return [component for component in self.components if component.id == id][0]
+    def get_component(self, custom_id):
+        return [
+            component
+            for component in self.components
+            if component.custom_id == custom_id
+        ][0]
 
-    def get_value(self):
-        value = {}
-        value["type"] = ComponentType.ROW
-        value["components"] = list(map(lambda comp: comp.get_value(), self.components))
-        return value
+    def get_dict(self):
+        return {
+            "type": ComponentType.ROW,
+            "components": list(map(lambda comp: comp.get_dict(), self.components)),
+        }
 
 
 class ButtonStyle:
@@ -33,23 +37,13 @@ class ButtonStyle:
 
 # https://discord.com/developers/docs/interactions/message-components#buttons
 class Button:
-    def __init__(self, style, label="", emoji="", id="", disabled=""):
+    def __init__(self, style, label=None, emoji=None, custom_id=None, disabled=None):
+        self.type = ComponentType.BUTTON
         self.style = style
         self.label = label
         self.emoji = emoji
-        self.id = id
+        self.custom_id = custom_id
         self.disabled = disabled
 
-    def get_value(self):
-        value = {}
-        value["type"] = ComponentType.BUTTON
-        value["style"] = self.style
-        if self.label != "":
-            value["label"] = self.label
-        if self.emoji != "":
-            value["emoji"] = self.emoji
-        if self.id != "":
-            value["custom_id"] = self.id
-        if self.disabled != "":
-            value["disabled"] = self.disabled
-        return value
+    def get_dict(self):
+        return vars(self)

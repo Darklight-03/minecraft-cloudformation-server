@@ -27,22 +27,24 @@ class Request:
         self.id = input.get("id")
         self.application_id = input.get("application_id")
         self.type = input.get("type")
-        if "data" in input.keys():
-            self.data = input.get("data")
-        if "guild_id" in input.keys():
-            self.guild_id = input.get("guild_id")
-        if "channel_id" in input.keys():
-            self.channel_id = input.get("channel_id")
-        if "member" in input.keys():
-            self.user = input.get("member").get("user")
-        if "user" in input.keys():
-            self.user = input.get("user")
-        if "token" in input.keys():
-            self.token = input.get("token")
-        if "version" in input.keys():
-            self.version = input.get("version")
-        if "message" in input.keys():
-            self.message = input.get("message")
+
+        # assign optional parameters to none for ease of use
+        self.data = None
+        self.guild_id = None
+        self.channel_id = None
+        self.user = None
+        self.member = None
+        self.token = None
+        self.version = None
+        self.message = None
+
+        # set all optional parameters if they were provided
+        for key in input:
+            setattr(self, key, input[key])
+
+        # user is hiding inside member if its None
+        if self.user is None and self.member is not None:
+            self.user = self.member["user"]
 
     def invalid_request():
         raise Exception("Invalid request type")

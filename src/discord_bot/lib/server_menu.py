@@ -6,8 +6,9 @@ from botocore.exceptions import ClientError
 from discord_bot.lib.components import Button, ButtonStyle
 from discord_bot.lib.request import Components
 from discord_bot.lib.response import (
+    Embed,
     EmbedColor,
-    MenuResponse,
+    Response,
     ResponseType,
 )
 
@@ -74,8 +75,8 @@ class SetServerState:
         return "Success"
 
     def get_message_update_success(self):
-        self.response.withDisabledStart().withDisabledStop()
-        self.response.withTitle(
+        self.response.with_disabled_start().with_disabled_stop()
+        self.response.with_title(
             f"Server is currently {ServerState.verb(self.desired_state)}..."
         )
         return self.response.get_response()
@@ -84,31 +85,31 @@ class SetServerState:
         if "is in UPDATE_IN_PROGRESS state" in self.output:
             self.output = "Server is still loading, please wait for it to start/stop."
             return (
-                self.response.withDisabledStart()
-                .withDisabledStop()
-                .withTitle(self.output)
+                self.response.with_disabled_start()
+                .with_disabled_stop()
+                .with_title(self.output)
                 .get_response()
             )
         elif "No updates are to be performed" in self.output:
             self.output = f"Server is already in state {self.desired_state}."
             if self.desired_state == ServerState.RUNNING:
                 return (
-                    self.response.withDisabledStart()
-                    .withTitle(self.output)
+                    self.response.with_disabled_start()
+                    .with_title(self.output)
                     .get_response()
                 )
             else:
                 return (
-                    self.response.withDisabledStop()
-                    .withTitle(self.output)
+                    self.response.with_disabled_stop()
+                    .with_title(self.output)
                     .get_response()
                 )
         else:
             # disable both buttons for unknown errors
             return (
-                self.response.withDisabledStart()
-                .withDisabledStop()
-                .withTitle(self.output)
+                self.response.with_disabled_start()
+                .with_disabled_stop()
+                .with_title(self.output)
                 .get_response()
             )
 
@@ -130,6 +131,7 @@ class ServerMenu:
         self.init_menu(type)
         self.fetch_menu_update()
 
+    # Updates the current status of the stack
     def update_stack_status(self):
         cfn = boto3.client("cloudformation")
         stack = cfn.describe_stacks(StackName=os.environ.get("STACK_NAME")).get(
@@ -143,59 +145,80 @@ class ServerMenu:
         ][0]
         self.stack_status = stack.get("StackStatus")
 
+    # gets the CanStart variable
     def update_can_start(self):
         ssm = boto3.client("ssm")
         self.can_start = (
             ssm.get_parameter(Name="CanStart").get("Parameter").get("Value") == "True"
         )
 
-    def withDisabledStart(self):
-        self.menu.component_rows[0].get_component("button_start_server").disabled = True
+    # Buttons
+    def with_disabled_start(self):
+        self.response.component_rows[0].get_component(
+            "button_start_server"
+        ).disabled = True
         return self
 
-    def withDisabledStop(self):
-        self.menu.component_rows[0].get_component("button_stop_server").disabled = True
+    def with_disabled_stop(self):
+        self.response.component_rows[0].get_component(
+            "button_stop_server"
+        ).disabled = True
         return self
 
-    def withTitle(self, title):
-        self.menu.embed.with_title(title)
-        return self
-
-    def get_response(self):
-        return self.menu.get_response()
-
+    # Setup initial menu
     def init_menu(self, type):
-        self.menu = MenuResponse(
-            type, f"Server is currently {self.current_state.lower()}"
+        self.response = Response(type)
+        self.menu = Embed().with_title(
+            f"Server is currently {self.current_state.lower()}"
         )
-        self.menu.add_component_row()
-        self.menu.component_rows[0].add_component(
-            Button(ButtonStyle.SUCCESS, label="Start", id="button_start_server")
+        self.response.add_embed(self.menu)
+        self.response.add_component_row()
+        self.response.component_rows[0].add_component(
+            Button(ButtonStyle.SUCCESS, label="Start", custom_id="button_start_server")
         )
-        self.menu.component_rows[0].add_component(
-            Button(ButtonStyle.DANGER, label="Stop", id="button_stop_server")
+        self.response.component_rows[0].add_component(
+            Button(ButtonStyle.DANGER, label="Stop", custom_id="button_stop_server")
         )
-        self.menu.component_rows[0].add_component(
+        self.response.component_rows[0].add_component(
             Button(
                 ButtonStyle.SECONDARY,
                 label="Refresh",
-                id="button_refresh_menu",
+                custom_id="button_refresh_menu",
             )
         )
 
-    def add_embed(self, embed):
-        self.menu.add_embed(embed)
+    # Update menu with new information
+    def fetch_menu_update(self):
+        if self.current_state == ServerState.RUNNING:
+            self.with_disabled_start()
+        if self.current_state == ServerState.STOPPED:
+            self.with_disabled_stop()
+        if self.stack_status not in [
+            "UPDATE_COMPLETE",
+            "CREATE_COMPLETE",
+            "UPDATE_ROLLBACK_COMPLETE",
+        ]:
+            self.with_disabled_start().with_disabled_stop()
+            self.with_title(
+                f"Server is currently {ServerState.verb(self.current_state)}..."
+            )
+        elif not self.can_start:
+            self.with_disabled_start()
+        self.add_embeds()
+
+    # Menu assignments
+    def with_title(self, title):
+        self.menu.with_title(title)
         return self
 
     def set_embed_data(self, description, color):
-        self.menu.embed.with_description(description)
-        self.menu.embed.with_color(color)
+        self.menu.with_description(description)
+        self.menu.with_color(color)
 
-    def get_next_start_time(self):
-        return f"(not yet implemented {datetime.now()})"
-
-    def get_next_stop_time(self):
-        return f"(not yet implemented {datetime.now()})"
+    # extra response data
+    def add_embed(self, embed):
+        self.response.add_embed(embed)
+        return self
 
     def add_embeds(self):
         if self.can_start:
@@ -210,23 +233,14 @@ class ServerMenu:
                 EmbedColor.RED,
             )
 
-    def fetch_menu_update(self):
-        if self.current_state == ServerState.RUNNING:
-            self.withDisabledStart()
-        if self.current_state == ServerState.STOPPED:
-            self.withDisabledStop()
-        if self.stack_status not in [
-            "UPDATE_COMPLETE",
-            "CREATE_COMPLETE",
-            "UPDATE_ROLLBACK_COMPLETE",
-        ]:
-            self.withDisabledStart().withDisabledStop()
-            self.withTitle(
-                f"Server is currently {ServerState.verb(self.current_state)}..."
-            )
-        elif not self.can_start:
-            self.withDisabledStart()
-        self.add_embeds()
+    def get_next_start_time(self):
+        return f"(not yet implemented {datetime.now()})"
+
+    def get_next_stop_time(self):
+        return f"(not yet implemented {datetime.now()})"
+
+    def get_response(self):
+        return self.response.get_response()
 
     def run(self):
-        return self.menu.get_response()
+        return self.response.get_response()

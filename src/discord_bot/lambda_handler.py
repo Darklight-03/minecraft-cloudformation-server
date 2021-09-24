@@ -2,7 +2,7 @@ import os
 
 from nacl.signing import VerifyKey
 from discord_bot.lib.response import (
-    BasicEmbed,
+    Embed,
     EmbedColor,
     ResponseType,
 )
@@ -58,10 +58,13 @@ def lambda_handler(event, context):
                     ResponseType.COMPONENT_MESSAGE,
                 )
                 .add_embed(
-                    BasicEmbed(
-                        f"You don't have permission to {request.get_component()}, "
-                        f"{request.user.get('username')}",
-                        EmbedColor.RED,
+                    (
+                        Embed()
+                        .with_description(
+                            f"You don't have permission to {request.get_component()}, "
+                            f"{request.user.get('username')}"
+                        )
+                        .with_color(EmbedColor.RED)
                     )
                 )
                 .run()
