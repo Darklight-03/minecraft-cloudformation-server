@@ -46,18 +46,18 @@ class Request:
         if self.user is None and self.member is not None:
             self.user = self.member["user"]
 
-    def invalid_request():
+    def invalid_request(self):
         raise Exception("Invalid request type")
 
     # return name of command for APP type
     def get_command(self):
-        if self.is_app_command:
+        if self.is_app_command():
             return self.data.get("name")
         else:
             self.invalid_request()
 
     def get_component(self):
-        if self.is_component_interaction:
+        if self.is_component_interaction():
             return self.data.get("custom_id")
         else:
             self.invalid_request()
