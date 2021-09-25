@@ -14,7 +14,8 @@
             "Condition": {
                 "StringEquals": {
                     "ResourceType": [
-                        "AWS::SSM::Parameter"
+                        "AWS::SSM::Parameter",
+                        "AWS::EC2::Volume"
                     ]
                 }
             }
