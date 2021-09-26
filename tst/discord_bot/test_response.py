@@ -1,12 +1,4 @@
-from discord_bot.lib.response import Embed, Response, ResponseType
-from pytest import fixture
-
-
-@fixture
-def embed():
-    return (
-        Embed().with_title("title").with_color("color").with_description("description")
-    )
+from discord_bot.lib.response import Response, ResponseType
 
 
 # TESTS #
@@ -42,3 +34,10 @@ def test_response_with_embed(embed):
     assert value["type"] == ResponseType.COMPONENT_MESSAGE
     data = value["data"]
     assert data["embeds"] == [embed.get_dict()]
+
+
+def test_response_with_components(component_row_with_button):
+    r = Response(ResponseType.COMPONENT_MESSAGE)
+    r.add_component_row(component_row_with_button)
+    value = r.get_response()
+    assert value["data"]["components"] == [component_row_with_button.get_dict()]

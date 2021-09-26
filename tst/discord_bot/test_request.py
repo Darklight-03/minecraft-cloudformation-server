@@ -1,43 +1,4 @@
-from discord_bot.lib.request import CommandType, Request, RequestType
-from pytest import fixture, raises
-
-
-@fixture
-def ping_request():
-    simple_ping = {
-        "id": "id",
-        "application_id": "application_id",
-        "type": RequestType.MESSAGE_PING,
-    }
-    return Request(simple_ping)
-
-
-@fixture
-def get_app_command_request():
-    def get_command(additional_parameters={}):
-        simple_command = {
-            "id": "id",
-            "application_id": "application_id",
-            "type": RequestType.MESSAGE_APP,
-            "data": {"id": "id", "name": "name", "type": CommandType.CHAT_INPUT},
-        }
-        return Request({**simple_command, **additional_parameters})
-
-    return get_command
-
-
-@fixture
-def get_component_request():
-    def get_component(additional_parameters={}):
-        simple_component = {
-            "id": "id",
-            "application_id": "application_id",
-            "type": RequestType.MESSAGE_COMPONENT,
-            "data": {"custom_id": "custom_id"},
-        }
-        return Request({**simple_component, **additional_parameters})
-
-    return get_component
+from pytest import raises
 
 
 # TESTS #

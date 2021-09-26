@@ -1,6 +1,10 @@
+import warnings
 from unittest.mock import patch
 
-import boto3
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=SyntaxWarning)
+    import boto3
+
 from botocore.stub import Stubber
 from pytest import fixture
 

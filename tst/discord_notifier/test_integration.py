@@ -1,7 +1,9 @@
-from discord_notifier.tstlib.test_mock_objects import newDescribeStacks
-from unittest.mock import ANY, patch, MagicMock
+from unittest.mock import ANY, MagicMock, patch
+
 import pytest
 import requests
+
+from discord_notifier.tstlib.test_mock_objects import newDescribeStacks
 
 with patch("os.environ") as environ:
     from discord_notifier import lambda_handler
@@ -45,7 +47,7 @@ MockBoto3Client = MagicMock()
 
 @patch("boto3.client", new=MockBoto3Client)
 @patch("requests.post", new=MockPost)
-class TestDiscordNotifier(object):
+class TestDiscordNotifier:
     def teardown_method(self, test_method):
         MockBoto3Client.reset_mock()
         MockPost.reset_mock()

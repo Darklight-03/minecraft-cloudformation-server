@@ -22,6 +22,11 @@ class GenericResponse:
     PONG_RESPONSE = {"type": ResponseType.PONG}
 
 
+class ButtonState:
+    DISABLED = True
+    ENABLED = False
+
+
 # https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-interaction-response-structure
 class Response:
     def __init__(self, type) -> None:
@@ -29,8 +34,9 @@ class Response:
         self.component_rows = []
         self.embeds = []
 
-    def add_component_row(self):
-        self.component_rows.append(ComponentRow())
+    def add_component_row(self, component_row=ComponentRow()):
+        if component_row is not None:
+            self.component_rows.append(component_row)
 
     def add_embed(self, embed):
         self.embeds.append(embed)
