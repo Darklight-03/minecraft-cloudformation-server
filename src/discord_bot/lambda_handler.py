@@ -1,15 +1,13 @@
 import os
 
 from nacl.signing import VerifyKey
-from discord_bot.lib.response import (
-    Embed,
-    EmbedColor,
-    ResponseType,
-)
 
-from discord_bot.lib.server_menu import ServerMenu, SetServerState
-from discord_bot.lib.request import Commands, Components, Request
-from discord_bot.lib.response import GenericResponse
+from discord_bot.lib.commands.set_server_state import set_server_state
+from discord_bot.lib.components import Components
+from discord_bot.lib.request import Commands, Request
+from discord_bot.lib.response import Embed, EmbedColor, GenericResponse, ResponseType
+from discord_bot.lib.server import Server
+from discord_bot.lib.server_menu import ServerMenu
 
 
 # VERIFICATION
@@ -46,7 +44,7 @@ def lambda_handler(event, context):
 
     if request.is_app_command():
         if request.get_command() == Commands.SERVER_MENU:
-            response = ServerMenu(ResponseType.MESSAGE).run()
+            response = ServerMenu(ResponseType.MESSAGE, Server()).get_response()
 
     if request.is_component_interaction():
         if request.user["id"] != ADMIN_ID and request.get_component() in [
@@ -54,9 +52,7 @@ def lambda_handler(event, context):
         ]:
             # send invalid permission response if no perm
             response = (
-                ServerMenu(
-                    ResponseType.COMPONENT_MESSAGE,
-                )
+                ServerMenu(ResponseType.COMPONENT_MESSAGE, Server())
                 .add_embed(
                     (
                         Embed()
@@ -67,14 +63,16 @@ def lambda_handler(event, context):
                         .with_color(EmbedColor.RED)
                     )
                 )
-                .run()
+                .get_response()
             )
         elif request.get_component() == Components.START_SERVER:
-            response = SetServerState(request).run()
+            response = set_server_state(request)
         elif request.get_component() == Components.STOP_SERVER:
-            response = SetServerState(request).run()
+            response = set_server_state(request)
         elif request.get_component() == Components.REFRESH_MENU:
-            response = ServerMenu(ResponseType.COMPONENT_MESSAGE).run()
+            response = ServerMenu(
+                ResponseType.COMPONENT_MESSAGE, Server()
+            ).get_response()
     if response == "":
         raise Exception(
             f"[INVALID_INPUT] Unrecognized request body: {event.get('body-json')}"

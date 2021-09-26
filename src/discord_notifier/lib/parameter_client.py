@@ -1,4 +1,8 @@
-import boto3
+import warnings
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=SyntaxWarning)
+    import boto3
 
 
 class Parameter:

@@ -1,1 +1,0 @@
-../../discord_bot/tstlib/test_mock_objects.py

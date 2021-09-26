@@ -1,5 +1,6 @@
-from discord_bot.lib.server_menu import ServerState
 from datetime import datetime
+
+from discord_bot.lib.server_menu import ServerState
 
 
 class newDescribeStacks:

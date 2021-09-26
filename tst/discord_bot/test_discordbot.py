@@ -4,8 +4,8 @@ import pytest
 from botocore.exceptions import ClientError
 
 import discord_bot.lambda_handler as lambda_handler
-from discord_bot.lib.components import ComponentType
-from discord_bot.lib.request import Components, Request
+from discord_bot.lib.components import Components, ComponentType
+from discord_bot.lib.request import Request
 from discord_bot.lib.response import ResponseType
 from discord_bot.lib.server_menu import ServerState
 from discord_bot.tstlib.test_mock_objects import newDescribeStacks
@@ -154,7 +154,7 @@ def assert_data_is_valid(data, response_type):
 
     if "components" in data.keys():
         components = data["components"]
-        assert type(data["components"]) is list
+        assert type(components) is list
         for item in components:
             assert_component_row_is_valid(item)
 
@@ -258,7 +258,6 @@ def test_server_menu(vsig, client):
     "error_message",
     [
         "is in UPDATE_IN_PROGRESS state",
-        "No updates are to be performed",
         "Unhandled ValidationError",
         "Unhandled Exception",
     ],
@@ -290,6 +289,11 @@ def test_start_server_error(
         and current_state == button_state
     ):
         return
+    if (
+        stack_status == "UPDATE_COMPLETE"
+        and current_state == ServerState.get_state_from_component(component_name)
+    ):
+        error_message = f"Server is already {current_state.lower()}"
 
     client().get_parameter.return_value = Parameter(can_start)
     client().describe_stacks.return_value = newDescribeStacks(
@@ -328,11 +332,7 @@ def test_start_server_error(
     )
 
     # when error is in this list, both state change buttons should be disabled (always)
-    if error_message in [
-        "is in UPDATE_IN_PROGRESS state",
-        "Unhandled ValidationError",
-        "Unhandled Exception",
-    ]:
+    if error_message in ["is in UPDATE_IN_PROGRESS state"]:
         assert all(
             c.get("disabled") is True
             for c in components
@@ -342,21 +342,13 @@ def test_start_server_error(
     # when you try to change it to the current state, only the
     # current state should be disabled (2 total enabled buttons)
     # (unless outside time range)
-    elif error_message == "No updates are to be performed":
+    elif "Server is already " in error_message:
         if can_start == "True":
             assert sum(map(lambda c: c.get("disabled") is not True, components)) == 2
-        if can_start == "False" and component_name == "button_start_server":
-            assert all(
-                c.get("disabled") is True
-                for c in components
-                if c.get("custom_id") != "button_refresh_menu"
-            )
 
     # when server can't start, the output should include that.
     if can_start == "False" and component_name == "button_start_server":
-        assert "not within the time" in response.get("data").get("embeds")[0].get(
-            "title"
-        )
+        assert "time window" in response.get("data").get("embeds")[0].get("title")
 
     # when we don't have error specific logic the error itself should be the output
     elif "Unhandled" in error_message:
@@ -474,6 +466,7 @@ def test_refresh_menu_has_time_embed(vsig, client, can_start):
 def test_invalid_user(vsig, client):
     client().get_parameter.return_value = Parameter("True")
     client().describe_stacks.return_value = newDescribeStacks().output
+    print(client)
     event = (
         incoming_packet(PacketType.COMPONENT)
         .with_component_name("button_start_server")
@@ -502,7 +495,8 @@ def test_invalid_user_can_stop(vsig, client):
     )
     response = lambda_handler.lambda_handler(event, "")
     assert_response_is_valid(response, ResponseType.COMPONENT_MESSAGE)
-    assert not any(
-        "don't have permission" in e["description"] for e in response["data"]["embeds"]
+    assert all(
+        "don't have permission" not in e["description"]
+        for e in response["data"]["embeds"]
     )
     vsig.assert_called_once_with(event)

@@ -1,3 +1,9 @@
+class Components:
+    START_SERVER = "button_start_server"
+    STOP_SERVER = "button_stop_server"
+    REFRESH_MENU = "button_refresh_menu"
+
+
 # component types
 class ComponentType:
     ROW = 1
@@ -5,15 +11,29 @@ class ComponentType:
     MENU = 3
 
 
+class Component:
+    def disable(self):
+        self.disabled = True
+
+    def enable(self):
+        self.disabled = False
+
+    def get_dict(self):
+        return vars(self)
+
+
 # https://discord.com/developers/docs/interactions/message-components#action-rows
 class ComponentRow:
     def __init__(self):
         self.components = []
 
+    def __iter__(self):
+        return iter(self.components)
+
     def add_component(self, component):
         self.components.append(component)
 
-    def get_component(self, custom_id):
+    def get_component(self, custom_id) -> Component:
         return [
             component
             for component in self.components
@@ -36,7 +56,7 @@ class ButtonStyle:
 
 
 # https://discord.com/developers/docs/interactions/message-components#buttons
-class Button:
+class Button(Component):
     def __init__(self, style, label=None, emoji=None, custom_id=None, disabled=None):
         self.type = ComponentType.BUTTON
         self.style = style
@@ -44,6 +64,3 @@ class Button:
         self.emoji = emoji
         self.custom_id = custom_id
         self.disabled = disabled
-
-    def get_dict(self):
-        return vars(self)

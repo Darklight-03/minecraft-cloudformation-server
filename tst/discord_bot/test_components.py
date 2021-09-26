@@ -1,29 +1,4 @@
-from discord_bot.lib.components import ComponentRow, Button, ButtonStyle, ComponentType
-from pytest import fixture
-
-
-@fixture
-def emoji():
-    # eventually should make an emoji object if we ever use this functionality
-    return {"name": "name", "id": "891064634054942740", "animated": False}
-
-
-@fixture
-def button(emoji):
-    return Button(
-        ButtonStyle.PRIMARY,
-        label="label",
-        emoji=emoji,
-        custom_id="custom_id",
-        disabled=False,
-    )
-
-
-@fixture
-def component_row_with_button(button):
-    row = ComponentRow()
-    row.add_component(button)
-    return row
+from discord_bot.lib.components import ButtonStyle, ComponentType
 
 
 # TESTS #
@@ -42,3 +17,21 @@ def test_button(button, emoji):
     assert dict["emoji"] == emoji
     assert dict["custom_id"] == "custom_id"
     assert dict["disabled"] is False
+
+
+def test_enable_button(button):
+    button.disabled = True
+    button.enable()
+    assert not button.disabled
+
+
+def test_disable_button(button):
+    button.disable()
+    assert button.disabled
+
+
+def test_iterator(component_row_with_buttons):
+    iterator = iter(component_row_with_buttons)
+    assert next(iterator).custom_id == "1"
+    assert next(iterator).custom_id == "2"
+    assert next(iterator).custom_id == "3"

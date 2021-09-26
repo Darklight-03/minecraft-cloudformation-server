@@ -15,12 +15,6 @@ class Commands:
     SERVER_MENU = "menu"
 
 
-class Components:
-    START_SERVER = "button_start_server"
-    STOP_SERVER = "button_stop_server"
-    REFRESH_MENU = "button_refresh_menu"
-
-
 # https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-interaction-structure
 class Request:
     def __init__(self, input):
@@ -56,7 +50,7 @@ class Request:
         else:
             self.invalid_request()
 
-    def get_component(self):
+    def get_component(self) -> str:
         if self.is_component_interaction():
             return self.data.get("custom_id")
         else:
