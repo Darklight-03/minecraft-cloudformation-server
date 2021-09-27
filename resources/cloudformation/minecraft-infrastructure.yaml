@@ -641,6 +641,8 @@ Resources:
         Variables:
           PublicKey: !Sub ${DiscordPublicKey}
           STACK_NAME: !Sub ${AWS::StackName}
+          START_SCHEDULE: !Sub ${StartScheduleCron}
+          STOP_SCHEDULE: !Sub ${StopScheduleCron}
   
   ServerStopper:
     Type: AWS::Lambda::Function

@@ -66,3 +66,11 @@ def test_response_is_valid(server_menu_factory):
     assert next(component_iter).custom_id == Components.START_SERVER
     assert next(component_iter).custom_id == Components.STOP_SERVER
     assert next(component_iter).custom_id == Components.REFRESH_MENU
+
+
+def test_Schedule_works(server_menu_factory):
+    server_menu = server_menu_factory()
+    response = server_menu.get_next_start_time()
+    assert response == "2021-09-27 15:00:00"
+    response = server_menu.get_next_stop_time()
+    assert response == "2021-09-27 22:00:00"

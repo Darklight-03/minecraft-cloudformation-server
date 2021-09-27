@@ -21,6 +21,8 @@ from discord_bot.tstlib.test_mock_objects import newDescribeStacks
 @fixture(autouse=True)
 def environs():
     os.environ["STACK_NAME"] = "StackName"
+    os.environ["START_SCHEDULE"] = "(0 20 * * ? *)"
+    os.environ["STOP_SCHEDULE"] = "(0 3 * * ? *)"
 
 
 @fixture

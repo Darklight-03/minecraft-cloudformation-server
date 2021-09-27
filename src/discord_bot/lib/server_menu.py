@@ -1,5 +1,6 @@
-from datetime import datetime
-
+from datetime import datetime, timedelta
+import croniter
+import os
 from discord_bot.lib.components import Button, ButtonStyle, ComponentRow
 from discord_bot.lib.response import Embed, EmbedColor, Response
 from discord_bot.lib.server import Server, ServerState
@@ -81,10 +82,24 @@ class ServerMenu:
             )
 
     def get_next_start_time(self):
-        return f"(not yet implemented {datetime.now()})"
+        now = datetime.now()
+        sched = os.environ["START_SCHEDULE"][1 : 1 - 3]
+        sched = sched.replace("?", "*")
+        cron = croniter.croniter(sched, now)
+        next_date = cron.get_next(datetime)
+        cent_time = timedelta(hours=-5)
+        next_date = next_date + cent_time
+        return str(next_date)
 
     def get_next_stop_time(self):
-        return f"(not yet implemented {datetime.now()})"
+        now = datetime.now()
+        sched = os.environ["STOP_SCHEDULE"][1 : 1 - 3]
+        sched = sched.replace("?", "*")
+        cron = croniter.croniter(sched, now)
+        next_date = cron.get_next(datetime)
+        cent_time = timedelta(hours=-5)
+        next_date = next_date + cent_time
+        return str(next_date)
 
     def get_response(self):
         return self.response.get_response()
