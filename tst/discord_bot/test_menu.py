@@ -1,3 +1,6 @@
+from datetime import datetime
+from unittest.mock import patch
+
 from pytest import mark
 
 from discord_bot.lib.components import Components
@@ -68,7 +71,9 @@ def test_response_is_valid(server_menu_factory):
     assert next(component_iter).custom_id == Components.REFRESH_MENU
 
 
-def test_Schedule_works(server_menu_factory):
+@patch("discord_bot.lib.server_menu.get_current_time")
+def test_schedule_works(dt, server_menu_factory):
+    dt.return_value = datetime(2021, 9, 27, 4, 0, 0)
     server_menu = server_menu_factory()
     response = server_menu.get_next_start_time()
     assert response == "2021-09-27 15:00:00"
