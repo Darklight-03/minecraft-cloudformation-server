@@ -358,6 +358,7 @@ Resources:
   LambdaFunctionForASG:
     Type: AWS::Lambda::Function
     Properties:
+      FunctionName: ECSGracefulStopper
       Description: Gracefully drain ECS tasks from EC2 instances before the instances are
                    terminated by autoscaling.
       Handler: index.lambda_handler
@@ -789,6 +790,10 @@ Resources:
         ToPort: 25565
         IpProtocol: tcp
         CidrIp: 0.0.0.0/0
+      - FromPort: 8123
+        ToPort: 8123
+        IpProtocol: tcp
+        CidrIp: 0.0.0.0/0
       VpcId: !Ref Vpc
 
   LaunchConfiguration:
@@ -821,7 +826,9 @@ Resources:
           fi
           mount /dev/sdf /opt/minecraft
           chown 845:845 /opt/minecraft
-          aws s3 cp s3://${Bucket}/modpack.zip /opt/minecraft/modpack.zip
+          aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="modpack.zip"
+          aws s3 sync s3://${Bucket}/mods /opt/mods
+          aws s3 sync s3://${Bucket}/config /opt/config
           yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
           yum install -y noip
           noip2 -C -u ${NoipUsername} -p ${NoipPassword} -I eth0 -U 10
@@ -962,6 +969,12 @@ Resources:
       - Host:
           SourcePath: /opt/minecraft
         Name: minecraft
+      - Host:
+          SourcePath: /opt/mods
+        Name: mods
+      - Host:
+          SourcePath: /opt/config
+        Name: config
       ContainerDefinitions:      
         - Name: minecraft
           StopTimeout: 120
@@ -970,6 +983,9 @@ Resources:
           PortMappings:
           - ContainerPort: 25565
             HostPort: 25565
+            Protocol: tcp
+          - ContainerPort: 8123
+            HostPort: 8123
             Protocol: tcp
           LogConfiguration:
             LogDriver: awslogs
@@ -982,9 +998,16 @@ Resources:
           - ContainerPath: /data
             SourceVolume: minecraft
             ReadOnly: false
+          - ContainerPath: /mods
+            SourceVolume: mods
+            ReadOnly: false
+          - ContainerPath: /config
+            SourceVolume: config
           Environment:
             - Name: "EULA"
               Value: "TRUE"
+            - Name: "CF_BASE_DIR"
+              Value: "/data"
             - Name: USE_AIKAR_FLAGS
               Value: 'true'
             - Name: STOP_DURATION

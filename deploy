@@ -69,6 +69,7 @@ for D in src/*; do
 done
 
 aws cloudformation package --template-file resources/cloudformation/minecraft-infrastructure.yaml --s3-bucket "${Bucket}" --output-template-file build/packaged-template.yaml
+aws s3 sync resources/minecraft/ s3://bdc3142-bucket/
 
 echo ""
 read -r -p "Packaging complete, would you like to deploy to ${StackName} in ${Region}? [y/N] " response
