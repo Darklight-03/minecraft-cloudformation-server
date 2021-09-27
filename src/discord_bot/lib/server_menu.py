@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timedelta
 
 import croniter
+
 from discord_bot.lib.components import Button, ButtonStyle, ComponentRow
 from discord_bot.lib.response import Embed, EmbedColor, Response
 from discord_bot.lib.server import Server, ServerState
@@ -97,10 +98,11 @@ class ServerMenu:
         now = get_current_time()
         sched = os.environ[environ][1 : 1 - 3]
         sched = sched.replace("?", "*")
-        environ = croniter.croniter(sched, now)
-        next_date = environ.get_next(datetime)
-        cent_time = timedelta(hours=-5)
-        next_date = next_date + cent_time
+        cron = croniter.croniter(sched, now)
+        next_date = cron.get_next(datetime)
+        cent_time_delta = timedelta(hours=-5)
+        next_date = next_date + cent_time_delta
+
         return str(next_date)
 
     def get_response(self):
