@@ -1,9 +1,16 @@
-from datetime import datetime, timedelta
-import croniter
 import os
+from datetime import datetime, timedelta
+
+import croniter
+
 from discord_bot.lib.components import Button, ButtonStyle, ComponentRow
 from discord_bot.lib.response import Embed, EmbedColor, Response
 from discord_bot.lib.server import Server, ServerState
+
+
+# this function is to allow mocking of datetime.now()
+def get_current_time():
+    return datetime.now()
 
 
 class ServerMenu:
@@ -82,23 +89,20 @@ class ServerMenu:
             )
 
     def get_next_start_time(self):
-        now = datetime.now()
-        sched = os.environ["START_SCHEDULE"][1 : 1 - 3]
-        sched = sched.replace("?", "*")
-        cron = croniter.croniter(sched, now)
-        next_date = cron.get_next(datetime)
-        cent_time = timedelta(hours=-5)
-        next_date = next_date + cent_time
-        return str(next_date)
+        return self.get_next_time_from_cron("START_SCHEDULE")
 
     def get_next_stop_time(self):
-        now = datetime.now()
-        sched = os.environ["STOP_SCHEDULE"][1 : 1 - 3]
+        return self.get_next_time_from_cron("STOP_SCHEDULE")
+
+    def get_next_time_from_cron(self, environ):
+        now = get_current_time()
+        sched = os.environ[environ][1 : 1 - 3]
         sched = sched.replace("?", "*")
         cron = croniter.croniter(sched, now)
         next_date = cron.get_next(datetime)
-        cent_time = timedelta(hours=-5)
-        next_date = next_date + cent_time
+        cent_time_delta = timedelta(hours=-5)
+        next_date = next_date + cent_time_delta
+
         return str(next_date)
 
     def get_response(self):
