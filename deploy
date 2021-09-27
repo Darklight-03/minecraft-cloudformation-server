@@ -4,6 +4,7 @@ NoipPassword=$(yq -r .Noip.Password credentials.yaml)
 DiscordPublicKey=$(yq -r .Discord.BotPublicKey credentials.yaml)
 DiscordApplicationId=$(yq -r .Discord.BotApplicationId credentials.yaml)
 DiscordBotToken=$(yq -r .Discord.BotToken credentials.yaml)
+DiscordIntegrationModBotToken=$(yq -r .Discord.DiscordIntegrationModBotToken credentials.yaml)
 WebhookUrl=$(yq -r .Discord.MinecraftChannelWebhookURL credentials.yaml)
 IPv4=$(yq -r .Network.IPv4 credentials.yaml)
 MCAdmin=$(yq -r .Minecraft.Username credentials.yaml)
@@ -69,6 +70,8 @@ for D in src/*; do
 done
 
 aws cloudformation package --template-file resources/cloudformation/minecraft-infrastructure.yaml --s3-bucket "${Bucket}" --output-template-file build/packaged-template.yaml
+cp resources/minecraft-config/* resources/minecraft/config/.
+sed -i "s/^  botToken = .*/  botToken = \"${DiscordIntegrationModBotToken}\"/" resources/minecraft/config/Discord-Integration.toml
 aws s3 sync resources/minecraft/ s3://bdc3142-bucket/
 
 echo ""
