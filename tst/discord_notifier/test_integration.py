@@ -95,17 +95,17 @@ class TestDiscordNotifier:
         )
         MockPost().raise_for_status.assert_called_once()
 
-    def test_delivers_ip_message(self):
+    def test_no_message(self):
         assert lambda_handler.lambda_handler({}, "") == 0
-        # check that expected message is delivered to webhook url
-        MockPost.assert_called_once_with(ANY, json=expected_message)
-        MockPost().raise_for_status.assert_called_once()
+        # check that no message is delivered to webhook url without parameters
+        MockPost.assert_not_called()
 
     # I don't know what this error means, but we test that it has the correct result
     def test_HTTPerror(self):
         MockPost().raise_for_status.side_effect = requests.exceptions.HTTPError()
-        assert lambda_handler.lambda_handler({}, "") == 1
-        MockPost.assert_called_with(ANY, json=expected_message)
+        assert (
+            lambda_handler.lambda_handler({"discord_message": "custom_message"}, "")
+            == 1
+        )
+        MockPost.assert_called_with(ANY, json=ANY)
         MockPost().raise_for_status.assert_called()
-        # why is setting up the side_effect count as a call
-        # I can't assert called_once_with
