@@ -69,6 +69,10 @@ for D in src/*; do
     fi
 done
 
+mkdir resources/minecraft > /dev/null 2>&1
+mkdir resources/minecraft/config > /dev/null 2>&1
+mkdir resources/minecraft/mods > /dev/null 2>&1
+
 aws cloudformation package --template-file resources/cloudformation/minecraft-infrastructure.yaml --s3-bucket "${Bucket}" --output-template-file build/packaged-template.yaml
 cp resources/minecraft-config/* resources/minecraft/config/.
 sed -i "s/^  botToken = .*/  botToken = \"${DiscordIntegrationModBotToken}\"/" resources/minecraft/config/Discord-Integration.toml
