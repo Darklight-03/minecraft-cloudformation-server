@@ -5,4 +5,6 @@ credentials.yaml
 config.yaml
 todo.md
 .vscode/*
-resources/minecraft/*
+resources/minecraft/config/*
+resources/minecraft/mods/*
+resources/minecraft/modpack.zip

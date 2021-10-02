@@ -827,6 +827,7 @@ Resources:
           mount /dev/sdf /opt/minecraft
           chown 845:845 /opt/minecraft
           aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="modpack.zip"
+          aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="log4j2.xml"
           aws s3 sync s3://${Bucket}/mods /opt/mods
           aws s3 sync s3://${Bucket}/config /opt/config
           yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
