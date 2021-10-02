@@ -645,34 +645,6 @@ Resources:
           START_SCHEDULE: !Sub ${StartScheduleCron}
           STOP_SCHEDULE: !Sub ${StopScheduleCron}
   
-  ServerStopper:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: server_stopper
-      Handler: index.lambda_handler
-      Role: !GetAtt LambdaRole.Arn
-      Runtime: python3.8
-      Code: 
-        ZipFile: !Sub |
-          import boto3
-          def handler(event, context):
-            cfn = boto3.client('cloudformation')
-            stack = cfn.describe_stacks(
-              StackName="${AWS::StackName}"
-            )
-            parameters = stack.get("Stacks")[0].get("Parameters")
-            def set_state(x):
-              if x.get("ParameterKey") == "ServerState":
-                x["ParameterValue"] = "Stopped"
-              return x
-            parameters = list(map(set_state ,parameters))
-            cfn.update_stack(
-              StackName="${AWS::StackName}",
-              UsePreviousTemplate=True,
-              Capabilities=['CAPABILITY_IAM'],
-              Parameters=parameters
-            )
-
   # Send an update to discord when ec2 instance comes up
   DiscordNotifier:
     Type: AWS::Lambda::Function
@@ -728,13 +700,15 @@ Resources:
         source: 
           - aws.ec2
         detail-type:
-          - EC2 Instance State-change Notification
-        detail:
-          state:
-            - running
+          - EC2 Spot Instance Interruption Warning 
       Targets:
         - Arn: !GetAtt DiscordNotifier.Arn
           Id: DiscordNotifier
+          Input: !Sub |
+            {
+              "discord_message": "Spot instance interruption warning received, shutting down server.",
+              "desired_state": "Stopped"
+            }
 
   StartSchedule:
     Type: AWS::Events::Rule
@@ -746,7 +720,7 @@ Resources:
           Input: !Sub |
             {
               "discord_message": "Server can now be started. stop schedule is: ${StopScheduleCron}",
-              "desired_state": "Running"
+              "can_start": "True"
             }
 
   StopSchedule:
@@ -759,6 +733,7 @@ Resources:
           Input: !Sub |
             {
               "discord_message": "Server is now stopping, start schedule is: ${StartScheduleCron}",
+              "can_start": "False",
               "desired_state": "Stopped"
             }
 
