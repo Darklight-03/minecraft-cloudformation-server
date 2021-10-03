@@ -26,10 +26,12 @@ def lambda_handler(event, context):
         send_message = True
         message_handler.set_message(event["discord_message"])
 
+    if "can_start" in event.keys():
+        can_start = event["can_start"]
+        Parameter().set_canstart(can_start)
+
     if "desired_state" in event.keys():
-        send_message = True
         desired_state = event["desired_state"]
-        Parameter().set_canstart("True" if desired_state == "Running" else "False")
         if desired_state == "Stopped":
             cfn = ServerManager(stack_name)
             cfn.stop_server()

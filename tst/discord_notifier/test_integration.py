@@ -29,6 +29,10 @@ class Event:
         self.value["desired_state"] = state
         return self
 
+    def with_can_start(self, can_start):
+        self.value["can_start"] = can_start
+        return self
+
 
 class KeyValue:
     def __init__(self, k, v):
@@ -52,7 +56,20 @@ class TestDiscordNotifier:
         MockBoto3Client.reset_mock()
         MockPost.reset_mock()
 
-    @pytest.mark.parametrize("desired_state", ["Running", "Stopped"])
+    @pytest.mark.parametrize("can_start", ["True", "False"])
+    def test_sets_can_start(self, can_start):
+        assert (
+            lambda_handler.lambda_handler(Event().with_can_start(can_start).value, "")
+            == 0
+        )
+        MockBoto3Client().put_parameter.assert_called_once_with(
+            Name="CanStart",
+            Value=can_start,
+            AllowedPattern="(True|False)",
+            Overwrite=True,
+        )
+
+    @pytest.mark.parametrize("desired_state", ["Stopped"])
     def test_changes_server_state(self, desired_state):
         MockBoto3Client().describe_stacks.return_value = newDescribeStacks(
             server_state="Running"
@@ -63,13 +80,6 @@ class TestDiscordNotifier:
             == 0
         )
 
-        MockPost.assert_called_once()
-        MockBoto3Client().put_parameter.assert_called_once_with(
-            Name="CanStart",
-            Value="True" if desired_state == "Running" else "False",
-            AllowedPattern="(True|False)",
-            Overwrite=True,
-        )
         desired_parameters = (
             newDescribeStacks(server_state="Stopped")
             .output.get("Stacks")[-1]
@@ -80,9 +90,6 @@ class TestDiscordNotifier:
                 MockBoto3Client().update_stack.call_args.kwargs.get("Parameters")
                 == desired_parameters
             )
-        else:
-            MockBoto3Client().update_stack.assert_not_called()
-        MockPost().raise_for_status.assert_called_once()
 
     def test_delivers_custom_message(self):
         assert (
