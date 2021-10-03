@@ -623,6 +623,7 @@ Resources:
                   - cloudformation:*
                   - ssm:*
                   - iam:getRole
+                  - dynamodb:*
                 Resource: "*"
 
   DiscordBot:
@@ -663,6 +664,7 @@ Resources:
         Variables:
           WebhookUrl: !Sub ${WebhookUrl}
           STACK_NAME: !Sub ${AWS::StackName}
+          TABLE_NAME: !Sub ${StatusTable}
 
   # Lambda to register commands on discord bot (run once manually)
   DiscordInit:
@@ -710,6 +712,21 @@ Resources:
               "desired_state": "Stopped"
             }
 
+  EventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source: 
+          - aws.ec2
+          - aws.ecs
+        detail-type:
+          - EC2 Instance State-change Notification
+          - ECS Task State Change
+          - ECS Service Action
+      Targets:
+        - Arn: !GetAtt DiscordNotifier.Arn
+          Id: DiscordNotifier
+
   StartSchedule:
     Type: AWS::Events::Rule
     Properties:
@@ -736,6 +753,17 @@ Resources:
               "can_start": "False",
               "desired_state": "Stopped"
             }
+
+  StatusTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: StackName
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: StackName
+          KeyType: HASH
 
   # ====================================================
   # INSTANCE CONFIG

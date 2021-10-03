@@ -3,6 +3,7 @@ AWS:
   ModpackBucket: bucket-name
   StackName: minecraft
   Region: us-west-2
+  InstanceType: m5zn.large
 Schedule: 
   Start: (0 0/2 * * ? *)
   Stop: (0 1/2 * * ? *)

@@ -16,6 +16,7 @@ StackName=$(yq -r .AWS.StackName config.yaml)
 Region=$(yq -r .AWS.Region config.yaml)
 StartSchedule=$(yq -r .Schedule.Start config.yaml)
 StopSchedule=$(yq -r .Schedule.Stop config.yaml)
+InstanceType=$(yq -r .AWS.InstanceType config.yaml)
 
 # Do not forget the \ at end of each line when modifying this
 ParameterOverrides=(
@@ -31,6 +32,7 @@ ParameterOverrides=(
     Bucket="${ModPackBucket}"
     StartScheduleCron="${StartSchedule}"
     StopScheduleCron="${StopSchedule}"
+    InstanceType="${InstanceType}"
 )
 
 ### Set up environment ###
@@ -78,7 +80,7 @@ mkdir resources/minecraft/mods > /dev/null 2>&1
 aws cloudformation package --template-file resources/cloudformation/minecraft-infrastructure.yaml --s3-bucket "${Bucket}" --output-template-file build/packaged-template.yaml
 cp resources/minecraft-config/* resources/minecraft/config/.
 sed -i "s/^  botToken = .*/  botToken = \"${DiscordIntegrationModBotToken}\"/" resources/minecraft/config/Discord-Integration.toml
-aws s3 sync resources/minecraft/ s3://"${ModPackBucket}"/
+aws s3 sync resources/minecraft/ s3://"${ModPackBucket}"/ --delete
 
 echo ""
 read -r -p "Packaging complete, would you like to deploy to ${StackName} in ${Region}? [y/N] " response
