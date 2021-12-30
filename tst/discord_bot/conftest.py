@@ -23,6 +23,7 @@ def environs():
     os.environ["STACK_NAME"] = "StackName"
     os.environ["START_SCHEDULE"] = "(0 20 * * ? *)"
     os.environ["STOP_SCHEDULE"] = "(0 3 * * ? *)"
+    os.environ["TABLE_NAME"] = "TableName"
 
 
 @fixture
