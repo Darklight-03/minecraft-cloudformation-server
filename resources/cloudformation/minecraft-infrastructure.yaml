@@ -53,12 +53,12 @@ Parameters:
   MinecraftImageTag:
     Type: String
     Description: "Java version (Examples include latest, adopt13, openj9, etc) Refer to tag descriptions available here: https://github.com/itzg/docker-minecraft-server)"
-    Default: 'java8'
+    Default: 'latest'
 
   MinecraftTypeTag:
     Type: String
     Description: "(Examples include SPIGOT, BUKKIT, TUINITY, etc) Refer to tag descriptions available here: https://github.com/itzg/docker-minecraft-server)"
-    Default: CURSEFORGE
+    Default: FORGE
 
   AdminPlayerNames:
     Type: String
@@ -83,12 +83,12 @@ Parameters:
   MinecraftVersion:
     Type: String
     Description: Server minecraft version
-    Default: ''
+    Default: '1.18.1'
 
   Memory:
     Type: String
     Description: How much Memory to allocate for the JVM
-    Default: '6G'
+    Default: '3G'
 
   Seed:
     Type: String
@@ -829,9 +829,7 @@ Resources:
           fi
           mount /dev/sdf /opt/minecraft
           chown 845:845 /opt/minecraft
-          aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="modpack.zip"
           aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="log4j2.xml"
-          aws s3 sync s3://${Bucket}/mods /opt/mods
           aws s3 sync s3://${Bucket}/config /opt/config
           yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
           yum install -y noip
@@ -982,7 +980,7 @@ Resources:
       ContainerDefinitions:      
         - Name: minecraft
           StopTimeout: 120
-          MemoryReservation: 4096
+          MemoryReservation: 3000
           Image: !Sub "itzg/minecraft-server:${MinecraftImageTag}"
           PortMappings:
           - ContainerPort: 25565
@@ -1029,8 +1027,6 @@ Resources:
               - Name: MOTD
                 Value: !Sub ${MOTD}
               - !Ref AWS::NoValue
-            - Name: CF_SERVER_MOD
-              Value: modpack.zip
             - !If
               - MinecraftTypeTagProvided
               - Name: "TYPE"
