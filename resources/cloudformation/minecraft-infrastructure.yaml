@@ -6,6 +6,7 @@ Parameters:
     Description: AWS ECS AMI ID
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id
+    # /aws/service/ecs/optimized-ami/amazon-linux-2/arm64/recommended/image_id for arm64
 
   ServerState:
     Type: String
@@ -643,6 +644,7 @@ Resources:
         Variables:
           PublicKey: !Sub ${DiscordPublicKey}
           STACK_NAME: !Sub ${AWS::StackName}
+          TABLE_NAME: !Sub ${StatusTable}
           START_SCHEDULE: !Sub ${StartScheduleCron}
           STOP_SCHEDULE: !Sub ${StopScheduleCron}
   

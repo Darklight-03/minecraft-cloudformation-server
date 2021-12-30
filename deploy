@@ -52,7 +52,15 @@ then
     ./install
 fi
 
-./test || exit 1
+./test
+if [[ $RESULT != 0 ]]; then
+    read -r -p "Tests failed, continue anyway? [y/N] " response
+    response=${response,,}    # tolower
+    if ! [[ "$response" =~ ^(yes|y)$ ]]
+    then
+        exit 1
+    fi
+fi
 
 ### Package for deployment ###
 

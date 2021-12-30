@@ -1,4 +1,5 @@
 import os
+import warnings
 from datetime import datetime, timedelta
 
 import croniter
@@ -6,6 +7,10 @@ import croniter
 from discord_bot.lib.components import Button, ButtonStyle, ComponentRow
 from discord_bot.lib.response import Embed, EmbedColor, Response
 from discord_bot.lib.server import Server, ServerState
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=SyntaxWarning)
+    import boto3
 
 
 # this function is to allow mocking of datetime.now()
@@ -20,6 +25,21 @@ class ServerMenu:
         self.server = server
         self.init_menu(type)
         self.fetch_menu_update()
+
+    def get_dynamo_info(self):
+        self.dynamo = boto3.client("dynamodb")
+        info = ""
+        dynamoitem = self.dynamo.get_item(
+            TableName=os.environ.get("TABLE_NAME"),
+            Key={"StackName": {"S": self.server.stack_name}},
+        ).get("Item")
+        if dynamoitem.get("InstanceStatus").get("S") == "running":
+            info += f"Server IP: {dynamoitem.get('InstanceDns').get('S')}\n"
+            if dynamoitem.get("EcsStatus").get("S") != "SERVICE_STEADY_STATE":
+                info += f"ECS Status: {dynamoitem.get('EcsStatus').get('S')}\n"
+        else:
+            info += "Instance is not running\n"
+        return info
 
     # Setup initial menu
     def init_menu(self, type):
@@ -78,13 +98,16 @@ class ServerMenu:
     def update_status(self):
         if self.server.can_start:
             self.set_status(
-                "it will be available until " f"{self.get_next_stop_time()}",
+                "it will be available until "
+                f"{self.get_next_stop_time()}\n\n"
+                f"{self.get_dynamo_info()}",
                 EmbedColor.GREEN,
             )
         else:
             self.set_status(
                 "it will next be available to start at "
-                f"{self.get_next_start_time()}",
+                f"{self.get_next_start_time()}\n\n"
+                f"{self.get_dynamo_info()}",
                 EmbedColor.RED,
             )
 
