@@ -17,6 +17,7 @@ Region=$(yq -r .AWS.Region config.yaml)
 StartSchedule=$(yq -r .Schedule.Start config.yaml)
 StopSchedule=$(yq -r .Schedule.Stop config.yaml)
 InstanceType=$(yq -r .AWS.InstanceType config.yaml)
+SpotPrice=$(yq -r .AWS.SpotPrice config.yaml)
 
 # Do not forget the \ at end of each line when modifying this
 ParameterOverrides=(
@@ -33,6 +34,7 @@ ParameterOverrides=(
     StartScheduleCron="${StartSchedule}"
     StopScheduleCron="${StopSchedule}"
     InstanceType="${InstanceType}"
+    SpotPrice="${SpotPrice}"
 )
 
 ### Set up environment ###
