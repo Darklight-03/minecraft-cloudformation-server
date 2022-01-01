@@ -18,6 +18,7 @@ StartSchedule=$(yq -r .Schedule.Start config.yaml)
 StopSchedule=$(yq -r .Schedule.Stop config.yaml)
 InstanceType=$(yq -r .AWS.InstanceType config.yaml)
 SpotPrice=$(yq -r .AWS.SpotPrice config.yaml)
+Memory=$(yq -r .Minecraft.Memory config.yaml)
 
 # Do not forget the \ at end of each line when modifying this
 ParameterOverrides=(
@@ -35,6 +36,7 @@ ParameterOverrides=(
     StopScheduleCron="${StopSchedule}"
     InstanceType="${InstanceType}"
     SpotPrice="${SpotPrice}"
+    Memory="${Memory}"
 )
 
 ### Set up environment ###
