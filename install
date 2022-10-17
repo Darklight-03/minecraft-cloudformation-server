@@ -2,6 +2,7 @@
 
 # install global requirements and create build folder
 echo "Installing requirements"
+sudo -H pip install coverage
 pip install -r requirements.txt > /dev/null 2>&1
 mkdir build > /dev/null 2>&1
 
