@@ -4,6 +4,9 @@ AWS:
   StackName: minecraft
   Region: us-west-2
   InstanceType: m5zn.large
+  SpotPrice: "0.12"
 Schedule: 
   Start: (0 0/2 * * ? *)
   Stop: (0 1/2 * * ? *)
+Minecraft:
+  Memory: 4G
