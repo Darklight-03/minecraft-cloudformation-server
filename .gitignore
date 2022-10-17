@@ -1,10 +1,12 @@
-build/*
-unused/*
-tst/__pycache__/*
+build
+unused
+tst/__pycache__
 credentials.yaml
 config.yaml
 todo.md
-.vscode/*
+.vscode
+.pytest_cache
 resources/minecraft/config/*
 resources/minecraft/mods/*
 resources/minecraft/modpack.zip
+minecraft
