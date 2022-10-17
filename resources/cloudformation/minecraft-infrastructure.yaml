@@ -363,7 +363,7 @@ Resources:
                    terminated by autoscaling.
       Handler: index.lambda_handler
       Role: !GetAtt LambdaRole.Arn
-      Runtime: python3.6
+      Runtime: python3.8
       MemorySize: 128
       Timeout: 60
       Code:

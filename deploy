@@ -54,6 +54,8 @@ fi
 echo "Cleaning up tests"
 ./clean
 
+mkdir build > /dev/null 2>&1
+
 for D in src/*; do
     if [ -d "${D}" ]; then
         function_name=$(basename "${D}")
@@ -76,7 +78,7 @@ mkdir resources/minecraft/mods > /dev/null 2>&1
 aws cloudformation package --template-file resources/cloudformation/minecraft-infrastructure.yaml --s3-bucket "${Bucket}" --output-template-file build/packaged-template.yaml
 cp resources/minecraft-config/* resources/minecraft/config/.
 sed -i "s/^  botToken = .*/  botToken = \"${DiscordIntegrationModBotToken}\"/" resources/minecraft/config/Discord-Integration.toml
-aws s3 sync resources/minecraft/ s3://bdc3142-bucket/
+aws s3 sync resources/minecraft/ s3://"${Bucket}"/
 
 echo ""
 read -r -p "Packaging complete, would you like to deploy to ${StackName} in ${Region}? [y/N] " response
@@ -84,8 +86,8 @@ response=${response,,}    # tolower
 if [[ "$response" =~ ^(yes|y)$ ]]
 then
     ### Deploy ###
-    aws cloudformation set-stack-policy --stack-name "${StackName}" --stack-policy-body "file://resources/cloudformation/stack-policy.json"
     aws cloudformation deploy --template-file build/packaged-template.yaml --stack-name "${StackName}" --region "${Region}" --capabilities CAPABILITY_IAM --parameter-overrides "${ParameterOverrides[@]}"
+    aws cloudformation set-stack-policy --stack-name "${StackName}" --stack-policy-body "file://resources/cloudformation/stack-policy.json"
 else
     exit 0
 fi
