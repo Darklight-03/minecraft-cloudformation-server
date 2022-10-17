@@ -78,7 +78,7 @@ mkdir resources/minecraft/mods > /dev/null 2>&1
 aws cloudformation package --template-file resources/cloudformation/minecraft-infrastructure.yaml --s3-bucket "${Bucket}" --output-template-file build/packaged-template.yaml
 cp resources/minecraft-config/* resources/minecraft/config/.
 sed -i "s/^  botToken = .*/  botToken = \"${DiscordIntegrationModBotToken}\"/" resources/minecraft/config/Discord-Integration.toml
-aws s3 sync resources/minecraft/ s3://"${Bucket}"/
+aws s3 sync resources/minecraft/ s3://"${ModPackBucket}"/
 
 echo ""
 read -r -p "Packaging complete, would you like to deploy to ${StackName} in ${Region}? [y/N] " response
