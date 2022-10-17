@@ -24,8 +24,6 @@ def verify_signature(event):
 
 
 ADMIN_ID = "105165905075396608"
-DAVID_ID = "166284587511709697"
-STARTERS = [ADMIN_ID, DAVID_ID]
 
 
 # CODE STARTS HERE
@@ -49,7 +47,7 @@ def lambda_handler(event, context):
             response = ServerMenu(ResponseType.MESSAGE, Server()).get_response()
 
     if request.is_component_interaction():
-        if request.user["id"][0] != "1" and request.get_component() in [
+        if request.user["id"] != ADMIN_ID and request.get_component() in [
             "button_start_server"
         ]:
             # send invalid permission response if no perm
