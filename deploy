@@ -19,6 +19,7 @@ StopSchedule=$(yq -r .Schedule.Stop config.yaml)
 InstanceType=$(yq -r .AWS.InstanceType config.yaml)
 SpotPrice=$(yq -r .AWS.SpotPrice config.yaml)
 Memory=$(yq -r .Minecraft.Memory config.yaml)
+ContainerMemory=$(yq -r .EcsContainer.Memory config.yaml)
 
 # Do not forget the \ at end of each line when modifying this
 ParameterOverrides=(
@@ -37,6 +38,7 @@ ParameterOverrides=(
     InstanceType="${InstanceType}"
     SpotPrice="${SpotPrice}"
     Memory="${Memory}"
+    ContainerMemory="${ContainerMemory}"
 )
 
 ### Set up environment ###
@@ -53,7 +55,7 @@ then
 fi
 
 ./test
-if [[ $RESULT != 0 ]]; then
+if [[ $? != 0 ]]; then
     read -r -p "Tests failed, continue anyway? [y/N] " response
     response=${response,,}    # tolower
     if ! [[ "$response" =~ ^(yes|y)$ ]]

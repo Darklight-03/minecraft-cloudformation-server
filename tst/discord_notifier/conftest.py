@@ -2,13 +2,45 @@ import os
 
 from pytest import fixture
 
-STACK_NAME = "StackName"
-TABLE_NAME = "TableName"
-WEBHOOK_URL = "WebhookUrl"
+import discord_notifier.tstlib.test_mock_objects as test_constants
 
 
 @fixture(autouse=True)
 def environs():
     os.environ["WebhookUrl"] = "WebhookUrl"
-    os.environ["STACK_NAME"] = "StackName"
-    os.environ["TABLE_NAME"] = "TableName"
+    os.environ["STACK_NAME"] = test_constants.STACK_NAME
+    os.environ["TABLE_NAME"] = test_constants.TABLE_NAME
+
+
+@fixture()
+def ec2_instance_statechange_event():
+    return {
+        "id": "7bf73129-1428-4cd3-a780-95db273d1602",
+        "detail-type": "EC2 Instance State-change Notification",
+        "source": "aws.ec2",
+        "account": "123456789012",
+        "time": "2021-11-11T21:29:54Z",
+        "region": "us-east-1",
+        "resources": ["arn:aws:ec2:us-east-1:123456789012:instance/i-abcd1111"],
+        "detail": {"instance-id": "i-abcd1111", "state": "pending"},
+    }
+
+
+@fixture
+def ecs_statechange_event():
+    return {
+        "version": "0",
+        "id": "af3c496d-f4a8-65d1-70f4-a69d52e9b584",
+        "detail-type": "ECS Service Action",
+        "source": "aws.ecs",
+        "account": "111122223333",
+        "time": "2019-11-19T19:27:22Z",
+        "region": "us-west-2",
+        "resources": ["arn:aws:ecs:us-west-2:111122223333:service/default/servicetest"],
+        "detail": {
+            "eventType": "INFO",
+            "eventName": "SERVICE_STEADY_STATE",
+            "clusterArn": "arn:aws:ecs:us-west-2:111122223333:cluster/default",
+            "createdAt": "2019-11-19T19:27:22.695Z",
+        },
+    }

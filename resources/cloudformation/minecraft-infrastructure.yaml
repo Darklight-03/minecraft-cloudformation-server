@@ -8,6 +8,11 @@ Parameters:
     Default: /aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id
     # /aws/service/ecs/optimized-ami/amazon-linux-2/arm64/recommended/image_id for arm64
 
+  ContainerMemory:
+    Type: Number
+    Description: Memory of ECS Container
+    Default: 4096
+
   ServerState:
     Type: String
     Description: "Running: A spot instance will launch shortly after setting this parameter; your Minecraft server should start within 5-10 minutes of changing this parameter (once UPDATE_IN_PROGRESS becomes UPDATE_COMPLETE). Stopped: Your spot instance (and thus Minecraft container) will be terminated shortly after setting this parameter."
@@ -714,17 +719,40 @@ Resources:
               "desired_state": "Stopped"
             }
 
-  EventRule:
+  Ec2EventRule:
     Type: AWS::Events::Rule
     Properties:
       EventPattern:
         source: 
           - aws.ec2
           - aws.ecs
+      Targets:
+        - Arn: !GetAtt DiscordNotifier.Arn
+          Id: DiscordNotifier
+
+  AsgEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source: 
+          - aws.autoscaling
+        detail:
+          AutoScalingGroupName: 
+            - !Ref AutoScalingGroup
+      Targets:
+        - Arn: !GetAtt DiscordNotifier.Arn
+          Id: DiscordNotifier
+
+  EcsEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source: 
+          - aws.ecs
         detail-type:
-          - EC2 Instance State-change Notification
-          - ECS Task State Change
           - ECS Service Action
+        resources:
+          - !Ref EcsService
       Targets:
         - Arn: !GetAtt DiscordNotifier.Arn
           Id: DiscordNotifier
@@ -984,7 +1012,7 @@ Resources:
       ContainerDefinitions:      
         - Name: minecraft
           StopTimeout: 120
-          MemoryReservation: 4096
+          MemoryReservation: !Sub ${ContainerMemory}
           Image: !Sub "itzg/minecraft-server:${MinecraftImageTag}"
           PortMappings:
           - ContainerPort: 25565

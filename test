@@ -27,3 +27,4 @@ AWS_ACCESS_KEY_ID="foo" AWS_SECRET_ACCESS_KEY="bar" coverage run --rcfile='../.c
 coverage html
 coverage report --rcfile='../.coveragerc' || exit 1
 cd .. || exit
+exit 0

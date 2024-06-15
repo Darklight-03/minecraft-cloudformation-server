@@ -9,5 +9,5 @@ def provide_ssm_client():
     return boto3.client("ssm")
 
 
-def provide_dynamo_client():
+def provide_ddb_client():
     return boto3.client("dynamodb")

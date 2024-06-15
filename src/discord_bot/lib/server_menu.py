@@ -1,16 +1,12 @@
 import os
-import warnings
 from datetime import datetime, timedelta
 
 import croniter
 
+import discord_bot.lib.provider as provider
 from discord_bot.lib.components import Button, ButtonStyle, ComponentRow
 from discord_bot.lib.response import Embed, EmbedColor, Response
 from discord_bot.lib.server import Server, ServerState
-
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=SyntaxWarning)
-    import boto3
 
 
 # this function is to allow mocking of datetime.now()
@@ -20,6 +16,7 @@ def get_current_time():
 
 class ServerMenu:
     def __init__(self, type, server: Server):
+        self.dynamo = provider.provide_ddb_client()
         if not server.updated:
             server.update()
         self.server = server
@@ -27,7 +24,6 @@ class ServerMenu:
         self.fetch_menu_update()
 
     def get_dynamo_info(self):
-        self.dynamo = boto3.client("dynamodb")
         info = ""
         dynamoitem = self.dynamo.get_item(
             TableName=os.environ.get("TABLE_NAME"),

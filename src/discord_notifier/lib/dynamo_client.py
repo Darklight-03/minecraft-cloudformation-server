@@ -32,8 +32,12 @@ class Dynamo:
     def put_ecs_status(self, ecs_status):
         self.update_item("EcsStatus", ecs_status)
 
-    def put_instance_status(self, detail):
-        if detail["state"] == "running":
+    def put_instance_status(self, event):
+        detail = event["detail"]
+        if event["detail-type"] == "EC2 Instance Launch Successful":
             # get dns name with ec2 api
-            self.update_item("InstanceDns", self.get_dns(detail["instance-id"]))
-        self.update_item("InstanceStatus", detail["state"])
+            self.update_item("InstanceDns", self.get_dns(detail["EC2InstanceId"]))
+            self.update_item("InstanceStatus", "running")
+
+        if event["detail-type"] == "EC2 Instance Terminate Successful":
+            self.update_item("InstanceStatus", "stopped")

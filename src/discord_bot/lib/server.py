@@ -1,8 +1,9 @@
 import os
 
 from botocore.exceptions import ClientError
+
+import discord_bot.lib.provider as provider
 from discord_bot.lib.components import Components
-from discord_bot.lib.provider import provide_cfn_client, provide_ssm_client
 
 
 class ServerState:
@@ -23,9 +24,9 @@ class ServerState:
 
 class Server:
     def __init__(self):
-        self.cfn = provide_cfn_client()
+        self.cfn = provider.provide_cfn_client()
         self.stack_name = os.environ.get("STACK_NAME")
-        self.ssm = provide_ssm_client()
+        self.ssm = provider.provide_ssm_client()
         self.current_state = "Unknown"
         self.stack_status = "Unknown"
         self.updated = False

@@ -47,10 +47,12 @@ class DictWhereKeyContainsStr(KeyValue):
 
 MockPost = MagicMock()
 MockBoto3Client = MagicMock()
+Dynamo = MagicMock()
 
 
 @patch("boto3.client", new=MockBoto3Client)
 @patch("requests.post", new=MockPost)
+@patch("discord_notifier.lambda_handler.Dynamo", new=Dynamo)
 class TestDiscordNotifier:
     def teardown_method(self, test_method):
         MockBoto3Client.reset_mock()
@@ -101,6 +103,14 @@ class TestDiscordNotifier:
             ANY, json=DictWhereKeyContainsStr("content", "custom_message")
         )
         MockPost().raise_for_status.assert_called_once()
+
+    def test_ec2instance_statechange_event(self, ec2_instance_statechange_event):
+        assert lambda_handler.lambda_handler(ec2_instance_statechange_event, "") == 0
+        Dynamo().put_instance_status.assert_called_once()
+
+    def test_ecs_statechange_event(self, ecs_statechange_event):
+        assert lambda_handler.lambda_handler(ecs_statechange_event, "") == 0
+        Dynamo().put_ecs_status.assert_called_once()
 
     def test_no_message(self):
         assert lambda_handler.lambda_handler({}, "") == 0

@@ -40,8 +40,8 @@ def lambda_handler(event, context):
     if "source" in event.keys():
         if event["detail-type"] == "EC2 Instance State-change Notification":
             Dynamo().put_instance_status(event["detail"])
-        elif event["detail-type"] == "ECS Task State Change":
-            Dynamo().put_ecs_status(event["detail"]["desiredStatus"])
+        elif event["source"] == "aws.autoscaling":
+            Dynamo().put_instance_status(event)
         elif event["detail-type"] == "ECS Service Action":
             Dynamo().put_ecs_status(event["detail"]["eventName"])
 

@@ -2,7 +2,7 @@ import warnings
 from datetime import datetime
 from unittest.mock import patch
 
-from discord_notifier.conftest import STACK_NAME, TABLE_NAME
+from discord_notifier.tstlib.test_mock_objects import STACK_NAME, TABLE_NAME
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=SyntaxWarning)
