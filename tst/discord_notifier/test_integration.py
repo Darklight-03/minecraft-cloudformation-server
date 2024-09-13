@@ -57,6 +57,7 @@ class TestDiscordNotifier:
     def teardown_method(self, test_method):
         MockBoto3Client.reset_mock()
         MockPost.reset_mock()
+        Dynamo.reset_mock()
 
     @pytest.mark.parametrize("can_start", ["True", "False"])
     def test_sets_can_start(self, can_start):
@@ -111,6 +112,10 @@ class TestDiscordNotifier:
     def test_ecs_statechange_event(self, ecs_statechange_event):
         assert lambda_handler.lambda_handler(ecs_statechange_event, "") == 0
         Dynamo().put_ecs_status.assert_called_once()
+
+    def test_asg_statechange_event(self, asg_statechange_event):
+        assert lambda_handler.lambda_handler(asg_statechange_event, "") == 0
+        Dynamo().put_instance_status.assert_called_once()
 
     def test_no_message(self):
         assert lambda_handler.lambda_handler({}, "") == 0

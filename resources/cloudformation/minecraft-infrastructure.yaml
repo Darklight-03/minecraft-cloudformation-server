@@ -64,7 +64,12 @@ Parameters:
   MinecraftTypeTag:
     Type: String
     Description: "(Examples include SPIGOT, BUKKIT, TUINITY, etc) Refer to tag descriptions available here: https://github.com/itzg/docker-minecraft-server)"
-    Default: CURSEFORGE
+    Default: CUSTOM
+
+  ServerJar:
+    Type: String
+    Description: "path to server jar, only works if MinecraftTypeTag = CUSTOM"
+    Default: 'lwjgl3ify-forgePatches.jar'
 
   AdminPlayerNames:
     Type: String
@@ -189,6 +194,10 @@ Parameters:
     Type: String
     Description: Cron Schedule to stop server
 
+  JVMOpts:
+    Type: String
+    Description: JVM Args to run server with
+
 # Not up to date
 Metadata:
   AWS::CloudFormation::Interface:
@@ -277,6 +286,7 @@ Metadata:
         default: "The server's timezone"
 
 Conditions:
+  CustomServerType: !Equals [ !Ref MinecraftTypeTag, 'CUSTOM' ]
   MinecraftTypeTagProvided: !Not [ !Equals [ !Ref MinecraftTypeTag, '' ] ]
   AdminPlayerNamesProvided: !Not [ !Equals [ !Ref AdminPlayerNames, '' ] ]
   DifficultyProvided: !Not [ !Equals [ !Ref Difficulty, '' ] ]
@@ -296,6 +306,7 @@ Conditions:
   EnableRollingLogsProvided: !Not [ !Equals [ !Ref EnableRollingLogs, '' ] ]
   TimezoneProvided: !Not [ !Equals [ !Ref Timezone, '' ] ]
   MOTDProvided: !Not [ !Equals [ !Ref MOTD, '' ] ]
+  JVMOptsProvided: !Not [ !Equals [ !Ref JVMOpts, '' ] ]
 
 
 
@@ -645,6 +656,7 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.8
       Code: ../../build/discord_bot
+      Timeout: 4
       Environment:
         Variables:
           PublicKey: !Sub ${DiscordPublicKey}
@@ -667,6 +679,7 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.8
       Code: ../../build/discord_notifier
+      Timeout: 12
       Environment:
         Variables:
           WebhookUrl: !Sub ${WebhookUrl}
@@ -687,6 +700,7 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.8
       Code: ../../build/discord_init
+      Timeout: 12
       Environment:
         Variables:
           ApplicationId: !Sub ${DiscordApplicationId}
@@ -858,7 +872,8 @@ Resources:
             mkfs.ext4 /dev/nvme1n1
           fi
           mount /dev/sdf /opt/minecraft
-          chown 845:845 /opt/minecraft
+          chown -R 1000:1000 /opt/minecraft
+          chmod -R u+w /opt/minecraft
           aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="modpack.zip"
           aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="log4j2.xml"
           aws s3 sync s3://${Bucket}/mods /opt/mods
@@ -1040,27 +1055,19 @@ Resources:
           Environment:
             - Name: "EULA"
               Value: "TRUE"
-            - Name: "CF_BASE_DIR"
-              Value: "/data"
-            - Name: USE_AIKAR_FLAGS
-              Value: 'true'
             - Name: STOP_DURATION
               Value: 300
             - Name: STOP_SERVER_ANNOUNCE_DELAY
               Value: 15
-            - Name: JVM_DD_OPTS
-              Value: fml.queryResult:confirm
-            - Name: ALLOW_FLIGHT
-              Value: 'TRUE'
             - Name: PLAYER_IDLE_TIMEOUT
               Value: 180
+            - Name: GENERIC_PACK
+              Value: modpack.zip
             - !If
               - MOTDProvided
               - Name: MOTD
                 Value: !Sub ${MOTD}
               - !Ref AWS::NoValue
-            - Name: CF_SERVER_MOD
-              Value: modpack.zip
             - !If
               - MinecraftTypeTagProvided
               - Name: "TYPE"
@@ -1125,4 +1132,14 @@ Resources:
               - TimezoneProvided
               - Name: "TZ"
                 Value: !Sub "${Timezone}"
+              - !Ref 'AWS::NoValue'
+            - !If
+              - CustomServerType
+              - Name: "CUSTOM_SERVER"
+                Value: !Sub "${ServerJar}"
+              - !Ref 'AWS::NoValue'
+            - !If
+              - JVMOptsProvided
+              - Name: JVM_OPTS
+                Value: !Sub "${JVMOpts}"
               - !Ref 'AWS::NoValue'

@@ -20,6 +20,10 @@ InstanceType=$(yq -r .AWS.InstanceType config.yaml)
 SpotPrice=$(yq -r .AWS.SpotPrice config.yaml)
 Memory=$(yq -r .Minecraft.Memory config.yaml)
 ContainerMemory=$(yq -r .EcsContainer.Memory config.yaml)
+ECSAMI=$(yq -r .EcsContainer.AMI config.yaml)
+MinecraftVersion=$(yq -r .Minecraft.Version config.yaml)
+JavaVersion=$(yq -r .Minecraft.JavaVersion config.yaml)
+JVMOpts=$(yq -r .Minecraft.JVMArgs config.yaml)
 
 # Do not forget the \ at end of each line when modifying this
 ParameterOverrides=(
@@ -39,9 +43,15 @@ ParameterOverrides=(
     SpotPrice="${SpotPrice}"
     Memory="${Memory}"
     ContainerMemory="${ContainerMemory}"
+    ECSAMI="${ECSAMI}"
+    MinecraftVersion="${MinecraftVersion}"
+    MinecraftImageTag="${JavaVersion}"
+    JVMOpts="${JVMOpts}"
 )
 
 ### Set up environment ###
+python3 -m venv "venvs/base_env"
+source venvs/base_env/bin/activate
 
 # clean up old build artifacts
 rm build/packaged-template.yaml > /dev/null 2>&1 
@@ -54,8 +64,7 @@ then
     ./install
 fi
 
-./test
-if [[ $? != 0 ]]; then
+if ! ./test; then
     read -r -p "Tests failed, continue anyway? [y/N] " response
     response=${response,,}    # tolower
     if ! [[ "$response" =~ ^(yes|y)$ ]]
@@ -75,6 +84,14 @@ mkdir build > /dev/null 2>&1
 for D in src/*; do
     if [ -d "${D}" ]; then
         function_name=$(basename "${D}")
+
+        # Create a separate virtual environment for each Lambda function
+        echo "Setting up virtual environment for ${function_name}"
+        python3 -m venv "venvs/${function_name}_env"
+
+        # Activate the virtual environment
+        source "venvs/${function_name}_env/bin/activate"
+
         echo "packaging ${function_name}"
         # do some fucked shit to get lambda to be able to import all the files
         mkdir "build/${function_name}" > /dev/null 2>&1
@@ -94,6 +111,7 @@ mkdir resources/minecraft/mods > /dev/null 2>&1
 aws cloudformation package --template-file resources/cloudformation/minecraft-infrastructure.yaml --s3-bucket "${Bucket}" --output-template-file build/packaged-template.yaml
 cp resources/minecraft-config/* resources/minecraft/config/.
 sed -i "s/^  botToken = .*/  botToken = \"${DiscordIntegrationModBotToken}\"/" resources/minecraft/config/Discord-Integration.toml
+(cd resources/modpack && zip -r ../minecraft/modpack.zip ./* > /dev/null 2>&1)
 aws s3 sync resources/minecraft/ s3://"${ModPackBucket}"/ --delete
 
 echo ""

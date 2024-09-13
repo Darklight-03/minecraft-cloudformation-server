@@ -16,6 +16,9 @@ from discord_notifier.lib.dynamo_client import Dynamo
 INSTANCE_ID = "i-00000"
 PUBLIC_DNS_NAME = "test.com"
 INSTANCE_STATE = "running"
+INSTANCE_STOPPED_STATE = "stopped"
+INSTANCE_LAUNCH_MSG = "EC2 Instance Launch Successful"
+INSTANCE_STOP_MSG = "EC2 Instance Terminate Successful"
 DESCRIBE_EC2 = {
     "Reservations": [
         {
@@ -66,7 +69,7 @@ def test_get_dns(ec2_resource):
     assert Dynamo().get_dns(INSTANCE_ID) == PUBLIC_DNS_NAME
 
 
-def test_put_instance_status(dynamo_client, ec2_resource):
+def test_put_start_instance_status(dynamo_client, ec2_resource):
     response = {}
     expected_params = {
         "ExpressionAttributeNames": {"#attrib": "InstanceDns"},
@@ -85,7 +88,30 @@ def test_put_instance_status(dynamo_client, ec2_resource):
         "UpdateExpression": "SET #attrib = :val",
     }
     dynamo_client.add_response("update_item", response, expected_params)
-    Dynamo().put_instance_status({"state": INSTANCE_STATE, "instance-id": INSTANCE_ID})
+    Dynamo().put_instance_status(
+        {
+            "detail-type": INSTANCE_LAUNCH_MSG,
+            "detail": {"state": INSTANCE_STATE, "EC2InstanceId": INSTANCE_ID},
+        }
+    )
+
+
+def test_put_stop_instance_status(dynamo_client):
+    response = {}
+    expected_params = {
+        "ExpressionAttributeNames": {"#attrib": "InstanceStatus"},
+        "ExpressionAttributeValues": {":val": {"S": INSTANCE_STOPPED_STATE}},
+        "Key": {"StackName": {"S": STACK_NAME}},
+        "TableName": TABLE_NAME,
+        "UpdateExpression": "SET #attrib = :val",
+    }
+    dynamo_client.add_response("update_item", response, expected_params)
+    Dynamo().put_instance_status(
+        {
+            "detail-type": INSTANCE_STOP_MSG,
+            "detail": {"state": INSTANCE_STOPPED_STATE, "EC2InstanceId": INSTANCE_ID},
+        }
+    )
 
 
 def test_put_ecs_status(dynamo_client):

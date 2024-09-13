@@ -39,5 +39,5 @@ class Dynamo:
             self.update_item("InstanceDns", self.get_dns(detail["EC2InstanceId"]))
             self.update_item("InstanceStatus", "running")
 
-        if event["detail-type"] == "EC2 Instance Terminate Successful":
+        elif event["detail-type"] == "EC2 Instance Terminate Successful":
             self.update_item("InstanceStatus", "stopped")

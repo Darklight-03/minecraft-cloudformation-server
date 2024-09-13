@@ -99,6 +99,6 @@ def test_schedule_works(dt, ddb, server_menu_factory, get_item_value):
     get_item_value()
     server_menu = server_menu_factory()
     response = server_menu.get_next_start_time()
-    assert response == "2021-09-27 15:00:00"
+    assert response == "<t:1632780000:R>"
     response = server_menu.get_next_stop_time()
-    assert response == "2021-09-27 22:00:00"
+    assert response == "<t:1632805200:R>"  # TODO parse and assert instead.

@@ -44,3 +44,35 @@ def ecs_statechange_event():
             "createdAt": "2019-11-19T19:27:22.695Z",
         },
     }
+
+
+@fixture
+def asg_statechange_event():
+    return {
+        "version": "0",
+        "id": "12345678-1234-1234-1234-123456789012",
+        "detail-type": "EC2 Instance Launch Successful",
+        "source": "aws.autoscaling",
+        "account": "123456789012",
+        "time": "yyyy-mm-ddThh:mm:ssZ",
+        "region": "us-west-2",
+        "resources": ["auto-scaling-group-arn", "instance-arn"],
+        "detail": {
+            "StatusCode": "InProgress",
+            "Description": "Launching a new EC2 instance: i-12345678",
+            "AutoScalingGroupName": "my-asg",
+            "ActivityId": "87654321-4321-4321-4321-210987654321",
+            "Details": {
+                "Availability Zone": "us-west-2b",
+                "Subnet ID": "subnet-12345678",
+            },
+            "RequestId": "12345678-1234-1234-1234-123456789012",
+            "StatusMessage": "",
+            "EndTime": "yyyy-mm-ddThh:mm:ssZ",
+            "EC2InstanceId": "i-1234567890abcdef0",
+            "StartTime": "yyyy-mm-ddThh:mm:ssZ",
+            "Cause": "description-text",
+            "Origin": "EC2",
+            "Destination": "AutoScalingGroup",
+        },
+    }

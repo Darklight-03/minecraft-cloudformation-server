@@ -1,2 +1,2 @@
 #!/bin/bash
-rm -r build/* build/.* > /dev/null 2>&1
+rm -r build/* build/.* env venvs > /dev/null 2>&1

@@ -9,4 +9,7 @@ todo.md
 resources/minecraft/config/*
 resources/minecraft/mods/*
 resources/minecraft/modpack.zip
+resources/modpack/*
 minecraft
+env
+venvs

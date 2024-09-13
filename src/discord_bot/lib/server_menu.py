@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import croniter
 
@@ -11,7 +11,7 @@ from discord_bot.lib.server import Server, ServerState
 
 # this function is to allow mocking of datetime.now()
 def get_current_time():
-    return datetime.now()
+    return datetime.now(timezone.utc)
 
 
 class ServerMenu:
@@ -28,11 +28,11 @@ class ServerMenu:
         dynamoitem = self.dynamo.get_item(
             TableName=os.environ.get("TABLE_NAME"),
             Key={"StackName": {"S": self.server.stack_name}},
-        ).get("Item")
-        if dynamoitem.get("InstanceStatus").get("S") == "running":
-            info += f"Server IP: {dynamoitem.get('InstanceDns').get('S')}\n"
-            if dynamoitem.get("EcsStatus").get("S") != "SERVICE_STEADY_STATE":
-                info += f"ECS Status: {dynamoitem.get('EcsStatus').get('S')}\n"
+        ).get("Item", {})
+        if dynamoitem.get("InstanceStatus", {}).get("S") == "running":
+            info += f"Server IP: {dynamoitem.get('InstanceDns', {}).get('S')}\n"
+            if dynamoitem.get("EcsStatus", {}).get("S") != "SERVICE_STEADY_STATE":
+                info += f"ECS Status: {dynamoitem.get('EcsStatus', {}).get('S')}\n"
         else:
             info += "Instance is not running\n"
         return info
@@ -122,7 +122,7 @@ class ServerMenu:
         cent_time_delta = timedelta(hours=-5)
         next_date = next_date + cent_time_delta
 
-        return str(next_date)
+        return f"<t:{int(next_date.timestamp())}:R>"
 
     def get_response(self):
         return self.response.get_response()

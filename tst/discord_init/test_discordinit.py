@@ -1,6 +1,6 @@
 from unittest.mock import ANY, patch
 
-with patch("os.environ") as environ:
+with patch.dict("os.environ", {"ApplicationId": "id", "BotToken": "token"}) as environ:
     from discord_init import lambda_handler
 
 
