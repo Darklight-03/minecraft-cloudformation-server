@@ -24,6 +24,8 @@ ECSAMI=$(yq -r .EcsContainer.AMI config.yaml)
 MinecraftVersion=$(yq -r .Minecraft.Version config.yaml)
 JavaVersion=$(yq -r .Minecraft.JavaVersion config.yaml)
 JVMOpts=$(yq -r .Minecraft.JVMArgs config.yaml)
+LevelType=$(yq -r .Minecraft.LevelType config.yaml)
+Seed=$(yq -r .Minecraft.Seed config.yaml)
 
 # Do not forget the \ at end of each line when modifying this
 ParameterOverrides=(
@@ -47,6 +49,8 @@ ParameterOverrides=(
     MinecraftVersion="${MinecraftVersion}"
     MinecraftImageTag="${JavaVersion}"
     JVMOpts="${JVMOpts}"
+    LevelType="${LevelType}"
+    Seed="${Seed}"
 )
 
 ### Set up environment ###

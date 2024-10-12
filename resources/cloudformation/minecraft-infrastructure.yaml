@@ -139,6 +139,7 @@ Parameters:
     - BUFFET
     - BIOMESOP
     - BIOMESOPLENTY
+    - rwg
 
   EnableRollingLogs:
     Type: String
@@ -156,7 +157,7 @@ Parameters:
   MOTD: 
     Type: String
     Description: Message of the Day
-    Default: ItsaServer PagMan
+    Default: ItsAServer
 
   NoipUsername:
     Type: String
@@ -740,6 +741,8 @@ Resources:
         source: 
           - aws.ec2
           - aws.ecs
+        detail-type:
+          - EC2 Instance State-change Notification
       Targets:
         - Arn: !GetAtt DiscordNotifier.Arn
           Id: DiscordNotifier
@@ -878,7 +881,8 @@ Resources:
           aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="log4j2.xml"
           aws s3 sync s3://${Bucket}/mods /opt/mods
           aws s3 sync s3://${Bucket}/config /opt/config
-          yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+          aws s3 sync /opt/minecraft/backups s3://${Bucket}/backups/
+          amazon-linux-extras install epel -y
           yum install -y noip
           noip2 -C -u ${NoipUsername} -p ${NoipPassword} -I eth0 -U 10
           systemctl enable noip.service

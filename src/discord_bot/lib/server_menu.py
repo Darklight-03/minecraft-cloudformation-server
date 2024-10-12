@@ -30,7 +30,7 @@ class ServerMenu:
             Key={"StackName": {"S": self.server.stack_name}},
         ).get("Item", {})
         if dynamoitem.get("InstanceStatus", {}).get("S") == "running":
-            info += f"Server IP: {dynamoitem.get('InstanceDns', {}).get('S')}\n"
+            info += f"Server IP: \n`{dynamoitem.get('InstanceDns', {}).get('S')}`\n"
             if dynamoitem.get("EcsStatus", {}).get("S") != "SERVICE_STEADY_STATE":
                 info += f"ECS Status: {dynamoitem.get('EcsStatus', {}).get('S')}\n"
         else:
