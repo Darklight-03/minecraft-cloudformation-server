@@ -65,7 +65,7 @@ def ec2_resource():
         stubber.assert_no_pending_responses()
 
 
-def test_get_dns(ec2_resource):
+def test_get_dns(dynamo_client, ec2_resource):
     assert Dynamo().get_dns(INSTANCE_ID) == PUBLIC_DNS_NAME
 
 
@@ -96,7 +96,7 @@ def test_put_start_instance_status(dynamo_client, ec2_resource):
     )
 
 
-def test_put_stop_instance_status(dynamo_client):
+def test_put_stop_instance_status(ec2_resource, dynamo_client):
     response = {}
     expected_params = {
         "ExpressionAttributeNames": {"#attrib": "InstanceStatus"},
@@ -114,7 +114,7 @@ def test_put_stop_instance_status(dynamo_client):
     )
 
 
-def test_put_ecs_status(dynamo_client):
+def test_put_ecs_status(dynamo_client, ec2_resource):
     ECS_STATUS = "testStatus"
     response = {}
     expected_params = {
