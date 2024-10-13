@@ -10,6 +10,7 @@ def environs():
     os.environ["WebhookUrl"] = "WebhookUrl"
     os.environ["STACK_NAME"] = test_constants.STACK_NAME
     os.environ["TABLE_NAME"] = test_constants.TABLE_NAME
+    os.environ["AWS_REGION"] = "us-west-2"
 
 
 @fixture()
