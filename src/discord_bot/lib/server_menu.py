@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import croniter
 
@@ -119,8 +119,6 @@ class ServerMenu:
         sched = sched.replace("?", "*")
         cron = croniter.croniter(sched, now)
         next_date = cron.get_next(datetime)
-        cent_time_delta = timedelta(hours=-5)
-        next_date = next_date + cent_time_delta
 
         return f"<t:{int(next_date.timestamp())}:R>"
 

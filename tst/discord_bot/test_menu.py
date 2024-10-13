@@ -95,10 +95,16 @@ def test_response_contains_ecs_status(
 
 @patch("discord_bot.lib.server_menu.get_current_time")
 def test_schedule_works(dt, ddb, server_menu_factory, get_item_value):
-    dt.return_value = datetime(2021, 9, 27, 4, 0, 0)
+    time = datetime(2021, 9, 27, 4, 0, 0)
+    expected_start_time = datetime(2021, 9, 27, 20, 0, 0)
+    expected_stop_time = datetime(2021, 9, 28, 3, 0, 0)
+
+    dt.return_value = time
     get_item_value()
     server_menu = server_menu_factory()
     response = server_menu.get_next_start_time()
-    assert response == "<t:1632780000:R>"
+    assert response == f"<t:{int(expected_start_time.timestamp())}:R>"
     response = server_menu.get_next_stop_time()
-    assert response == "<t:1632805200:R>"  # TODO parse and assert instead.
+    assert (
+        response == f"<t:{int(expected_stop_time.timestamp())}:R>"
+    )  # TODO parse and assert instead.
