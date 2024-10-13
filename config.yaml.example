@@ -16,3 +16,5 @@ Minecraft:
   Version: 1.7.10
   JavaVersion: java21
   JVMArgs: -Dfml.readTimeout=180
+  LevelType: rwg
+  Seed: "-9044716111117546669"
