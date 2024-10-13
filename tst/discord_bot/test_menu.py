@@ -9,7 +9,10 @@ from discord_bot.lib.server import ServerState
 
 
 @mark.parametrize("server_state", [ServerState.RUNNING, ServerState.STOPPED])
-def test_current_state_is_disabled(server_menu_factory, server_state):
+def test_current_state_is_disabled(
+    ddb, server_menu_factory, server_state, get_item_value
+):
+    get_item_value(instance_status=server_state)
     server_menu = server_menu_factory(
         server_state=server_state, stack_state="UPDATE_COMPLETE", can_start=True
     )
@@ -26,8 +29,9 @@ def test_current_state_is_disabled(server_menu_factory, server_state):
 @mark.parametrize("server_state", [ServerState.RUNNING, ServerState.STOPPED])
 @mark.parametrize("can_start", [True, False])
 def test_server_changing_states_disables_both_buttons(
-    server_menu_factory, server_state, can_start
+    ddb, server_menu_factory, server_state, can_start, get_item_value
 ):
+    get_item_value(instance_status=server_state)
     server_menu = server_menu_factory(
         server_state=server_state, stack_state="UPDATE_IN_PROGRESS", can_start=can_start
     )
@@ -45,7 +49,10 @@ def test_server_changing_states_disables_both_buttons(
 
 
 @mark.parametrize("server_state", [ServerState.RUNNING, ServerState.STOPPED])
-def test_cant_start_disables_start(server_menu_factory, server_state):
+def test_cant_start_disables_start(
+    ddb, server_menu_factory, server_state, get_item_value
+):
+    get_item_value(instance_status=server_state)
     server_menu = server_menu_factory(
         server_state=server_state, stack_state="UPDATE_COMPLETE", can_start=False
     )
@@ -60,7 +67,8 @@ def test_cant_start_disables_start(server_menu_factory, server_state):
     assert server_menu.status.color == EmbedColor.RED
 
 
-def test_response_is_valid(server_menu_factory):
+def test_response_is_valid(ddb, server_menu_factory, get_item_value):
+    get_item_value()
     server_menu = server_menu_factory()
     response = server_menu.response
     assert len(response.embeds) > 0
@@ -71,11 +79,32 @@ def test_response_is_valid(server_menu_factory):
     assert next(component_iter).custom_id == Components.REFRESH_MENU
 
 
+@mark.parametrize("server_state", [ServerState.RUNNING, ServerState.STOPPED])
+def test_response_contains_ecs_status(
+    ddb, server_menu_factory, get_item_value, server_state
+):
+    ecs_status = "SomeStatus55383"
+    get_item_value(instance_status=server_state.lower(), ecs_status=ecs_status)
+    server_menu = server_menu_factory()
+    status = server_menu.status.description
+    if server_state == ServerState.RUNNING:
+        assert ecs_status in status
+    else:
+        assert ecs_status not in status
+
+
 @patch("discord_bot.lib.server_menu.get_current_time")
-def test_schedule_works(dt, server_menu_factory):
-    dt.return_value = datetime(2021, 9, 27, 4, 0, 0)
+def test_schedule_works(dt, ddb, server_menu_factory, get_item_value):
+    time = datetime(2021, 9, 27, 4, 0, 0)
+    expected_start_time = datetime(2021, 9, 27, 20, 0, 0)
+    expected_stop_time = datetime(2021, 9, 28, 3, 0, 0)
+
+    dt.return_value = time
+    get_item_value()
     server_menu = server_menu_factory()
     response = server_menu.get_next_start_time()
-    assert response == "2021-09-27 15:00:00"
+    assert response == f"<t:{int(expected_start_time.timestamp())}:R>"
     response = server_menu.get_next_stop_time()
-    assert response == "2021-09-27 22:00:00"
+    assert (
+        response == f"<t:{int(expected_stop_time.timestamp())}:R>"
+    )  # TODO parse and assert instead.

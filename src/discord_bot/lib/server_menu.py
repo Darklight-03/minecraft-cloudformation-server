@@ -1,8 +1,9 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 
 import croniter
 
+import discord_bot.lib.provider as provider
 from discord_bot.lib.components import Button, ButtonStyle, ComponentRow
 from discord_bot.lib.response import Embed, EmbedColor, Response
 from discord_bot.lib.server import Server, ServerState
@@ -10,16 +11,31 @@ from discord_bot.lib.server import Server, ServerState
 
 # this function is to allow mocking of datetime.now()
 def get_current_time():
-    return datetime.now()
+    return datetime.now(timezone.utc)
 
 
 class ServerMenu:
     def __init__(self, type, server: Server):
+        self.dynamo = provider.provide_ddb_client()
         if not server.updated:
             server.update()
         self.server = server
         self.init_menu(type)
         self.fetch_menu_update()
+
+    def get_dynamo_info(self):
+        info = ""
+        dynamoitem = self.dynamo.get_item(
+            TableName=os.environ.get("TABLE_NAME"),
+            Key={"StackName": {"S": self.server.stack_name}},
+        ).get("Item", {})
+        if dynamoitem.get("InstanceStatus", {}).get("S") == "running":
+            info += f"Server IP: \n`{dynamoitem.get('InstanceDns', {}).get('S')}`\n"
+            if dynamoitem.get("EcsStatus", {}).get("S") != "SERVICE_STEADY_STATE":
+                info += f"ECS Status: {dynamoitem.get('EcsStatus', {}).get('S')}\n"
+        else:
+            info += "Instance is not running\n"
+        return info
 
     # Setup initial menu
     def init_menu(self, type):
@@ -78,13 +94,16 @@ class ServerMenu:
     def update_status(self):
         if self.server.can_start:
             self.set_status(
-                "it will be available until " f"{self.get_next_stop_time()}",
+                "it will be available until "
+                f"{self.get_next_stop_time()}\n\n"
+                f"{self.get_dynamo_info()}",
                 EmbedColor.GREEN,
             )
         else:
             self.set_status(
                 "it will next be available to start at "
-                f"{self.get_next_start_time()}",
+                f"{self.get_next_start_time()}\n\n"
+                f"{self.get_dynamo_info()}",
                 EmbedColor.RED,
             )
 
@@ -100,10 +119,8 @@ class ServerMenu:
         sched = sched.replace("?", "*")
         cron = croniter.croniter(sched, now)
         next_date = cron.get_next(datetime)
-        cent_time_delta = timedelta(hours=-5)
-        next_date = next_date + cent_time_delta
 
-        return str(next_date)
+        return f"<t:{int(next_date.timestamp())}:R>"
 
     def get_response(self):
         return self.response.get_response()

@@ -2,12 +2,18 @@ from datetime import datetime
 
 from discord_bot.lib.server_menu import ServerState
 
+INSTANCE_DNS = "ec2.us-west-2.compute.amazonaws.com"
+STACK_NAME = "STACK_NAME"
+STACK_ID = f"arn:aws:cloudformation:us-west-2:000000000000:stack\n\
+/{STACK_NAME}/00000000-0000-0000-0000-000000000000"
+TABLE_NAME = "STACK_NAME-StatusTable-AAAAAAA"
+
 
 class newDescribeStacks:
     def __init__(
         self,
-        stack_name="stack_name",
-        stack_id="stack_id",
+        stack_name=STACK_NAME,
+        stack_id=STACK_ID,
         stack_status="UPDATE_COMPLETE",
         parameters=["p1", "p2", "p3", "ServerState", "p4", "p5"],
         server_state=ServerState.STOPPED,
@@ -43,4 +49,23 @@ class newDescribeStacks:
                     ],
                 }
             ]
+        }
+
+
+class newGetItem:
+    def __init__(
+        self,
+        ecs_status="SERVICE_STEADY_STATE",
+        instance_dns=INSTANCE_DNS,
+        stack_name=STACK_NAME,
+        instance_status="terminated",
+    ):
+
+        self.output = {
+            "Item": {
+                "EcsStatus": {"S": ecs_status},
+                "InstanceDns": {"S": instance_dns},
+                "StackName": {"S": stack_name},
+                "InstanceStatus": {"S": instance_status},
+            }
         }

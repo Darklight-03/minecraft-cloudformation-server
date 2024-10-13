@@ -3,6 +3,7 @@ import warnings
 
 import requests
 
+from discord_notifier.lib.dynamo_client import Dynamo
 from discord_notifier.lib.message_handler import MessageHandler
 from discord_notifier.lib.parameter_client import Parameter
 from discord_notifier.lib.server_manager import ServerManager
@@ -35,6 +36,14 @@ def lambda_handler(event, context):
         if desired_state == "Stopped":
             cfn = ServerManager(stack_name)
             cfn.stop_server()
+
+    if "source" in event.keys():
+        if event["detail-type"] == "EC2 Instance State-change Notification":
+            Dynamo().put_instance_status(event["detail"])
+        elif event["source"] == "aws.autoscaling":
+            Dynamo().put_instance_status(event)
+        elif event["detail-type"] == "ECS Service Action":
+            Dynamo().put_ecs_status(event["detail"]["eventName"])
 
     if send_message:
         result = requests.post(url, json=message_handler.message)

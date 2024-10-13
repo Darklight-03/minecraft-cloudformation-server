@@ -10,19 +10,21 @@ with warnings.catch_warnings():
 
 from botocore.stub import Stubber
 
+import discord_bot.tstlib.test_mock_objects as test_constants
 from discord_bot.lib.components import Button, ButtonStyle, ComponentRow
 from discord_bot.lib.request import CommandType, Request, RequestType
 from discord_bot.lib.response import Embed, ResponseType
 from discord_bot.lib.server import Server
 from discord_bot.lib.server_menu import ServerMenu
-from discord_bot.tstlib.test_mock_objects import newDescribeStacks
+from discord_bot.tstlib.test_mock_objects import newDescribeStacks, newGetItem
 
 
 @fixture(autouse=True)
 def environs():
-    os.environ["STACK_NAME"] = "StackName"
+    os.environ["STACK_NAME"] = test_constants.STACK_NAME
     os.environ["START_SCHEDULE"] = "(0 20 * * ? *)"
     os.environ["STOP_SCHEDULE"] = "(0 3 * * ? *)"
+    os.environ["TABLE_NAME"] = test_constants.TABLE_NAME
 
 
 @fixture
@@ -116,7 +118,7 @@ def ssm():
     ssm = boto3.client("ssm", region_name="us-west-2")
     with Stubber(ssm) as stubber:
         stubber.activate()
-        with patch("discord_bot.lib.server.provide_ssm_client") as ssm_client:
+        with patch("discord_bot.lib.provider.provide_ssm_client") as ssm_client:
             ssm_client.return_value = ssm
             yield stubber
             stubber.assert_no_pending_responses()
@@ -127,10 +129,36 @@ def cfn():
     cfn = boto3.client("cloudformation", region_name="us-west-2")
     with Stubber(cfn) as stubber:
         stubber.activate()
-        with patch("discord_bot.lib.server.provide_cfn_client") as cfn_client:
+        with patch("discord_bot.lib.provider.provide_cfn_client") as cfn_client:
             cfn_client.return_value = cfn
             yield stubber
             stubber.assert_no_pending_responses()
+
+
+@fixture
+def ddb():
+    ddb = boto3.client("dynamodb", region_name="us-west-2")
+    with Stubber(ddb) as stubber:
+        stubber.activate()
+        with patch("discord_bot.lib.provider.provide_ddb_client") as ddb_client:
+            ddb_client.return_value = ddb
+            yield stubber
+            stubber.assert_no_pending_responses()
+
+
+@fixture
+def get_item_value(ddb):
+    def get_item_factory(ecs_status="SERVICE_STEADY_STATE", instance_status="running"):
+        get_item = newGetItem(
+            ecs_status=ecs_status, instance_status=instance_status.lower()
+        )
+        expected_params = {
+            "Key": {"StackName": {"S": test_constants.STACK_NAME}},
+            "TableName": test_constants.TABLE_NAME,
+        }
+        ddb.add_response("get_item", get_item.output, expected_params)
+
+    return get_item_factory
 
 
 @fixture
@@ -150,7 +178,7 @@ def describe_stacks_value(cfn):
         describe_stacks = newDescribeStacks(
             server_state=server_state, stack_status=stack_state
         )
-        expected_params = {"StackName": "StackName"}
+        expected_params = {"StackName": test_constants.STACK_NAME}
         stack_state = describe_stacks.output
         cfn.add_response("describe_stacks", stack_state, expected_params)
 
@@ -161,12 +189,14 @@ def describe_stacks_value(cfn):
 def update_stack_value(cfn):
     def update_stack_factory(server_state="Running"):
         expected_params = {
-            "StackName": "StackName",
+            "StackName": test_constants.STACK_NAME,
             "UsePreviousTemplate": True,
             "Capabilities": ["CAPABILITY_IAM"],
             "Parameters": newDescribeStacks(server_state=server_state).parameters,
         }
-        cfn.add_response("update_stack", {"StackId": "StackName"}, expected_params)
+        cfn.add_response(
+            "update_stack", {"StackId": test_constants.STACK_NAME}, expected_params
+        )
 
     return update_stack_factory
 
@@ -179,7 +209,7 @@ def update_stack_error(cfn):
         error_code="ValidationError",
     ):
         expected_params = {
-            "StackName": "StackName",
+            "StackName": test_constants.STACK_NAME,
             "UsePreviousTemplate": True,
             "Capabilities": ["CAPABILITY_IAM"],
             "Parameters": newDescribeStacks(server_state=server_state).parameters,

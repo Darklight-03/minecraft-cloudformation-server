@@ -6,6 +6,12 @@ Parameters:
     Description: AWS ECS AMI ID
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id
+    # /aws/service/ecs/optimized-ami/amazon-linux-2/arm64/recommended/image_id for arm64
+
+  ContainerMemory:
+    Type: Number
+    Description: Memory of ECS Container
+    Default: 4096
 
   ServerState:
     Type: String
@@ -58,7 +64,12 @@ Parameters:
   MinecraftTypeTag:
     Type: String
     Description: "(Examples include SPIGOT, BUKKIT, TUINITY, etc) Refer to tag descriptions available here: https://github.com/itzg/docker-minecraft-server)"
-    Default: CURSEFORGE
+    Default: CUSTOM
+
+  ServerJar:
+    Type: String
+    Description: "path to server jar, only works if MinecraftTypeTag = CUSTOM"
+    Default: 'lwjgl3ify-forgePatches.jar'
 
   AdminPlayerNames:
     Type: String
@@ -128,6 +139,7 @@ Parameters:
     - BUFFET
     - BIOMESOP
     - BIOMESOPLENTY
+    - rwg
 
   EnableRollingLogs:
     Type: String
@@ -145,7 +157,7 @@ Parameters:
   MOTD: 
     Type: String
     Description: Message of the Day
-    Default: ItsaServer PagMan
+    Default: ItsAServer
 
   NoipUsername:
     Type: String
@@ -182,6 +194,10 @@ Parameters:
   StopScheduleCron:
     Type: String
     Description: Cron Schedule to stop server
+
+  JVMOpts:
+    Type: String
+    Description: JVM Args to run server with
 
 # Not up to date
 Metadata:
@@ -271,6 +287,7 @@ Metadata:
         default: "The server's timezone"
 
 Conditions:
+  CustomServerType: !Equals [ !Ref MinecraftTypeTag, 'CUSTOM' ]
   MinecraftTypeTagProvided: !Not [ !Equals [ !Ref MinecraftTypeTag, '' ] ]
   AdminPlayerNamesProvided: !Not [ !Equals [ !Ref AdminPlayerNames, '' ] ]
   DifficultyProvided: !Not [ !Equals [ !Ref Difficulty, '' ] ]
@@ -290,6 +307,7 @@ Conditions:
   EnableRollingLogsProvided: !Not [ !Equals [ !Ref EnableRollingLogs, '' ] ]
   TimezoneProvided: !Not [ !Equals [ !Ref Timezone, '' ] ]
   MOTDProvided: !Not [ !Equals [ !Ref MOTD, '' ] ]
+  JVMOptsProvided: !Not [ !Equals [ !Ref JVMOpts, '' ] ]
 
 
 
@@ -623,6 +641,7 @@ Resources:
                   - cloudformation:*
                   - ssm:*
                   - iam:getRole
+                  - dynamodb:*
                 Resource: "*"
 
   DiscordBot:
@@ -638,10 +657,12 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.8
       Code: ../../build/discord_bot
+      Timeout: 4
       Environment:
         Variables:
           PublicKey: !Sub ${DiscordPublicKey}
           STACK_NAME: !Sub ${AWS::StackName}
+          TABLE_NAME: !Sub ${StatusTable}
           START_SCHEDULE: !Sub ${StartScheduleCron}
           STOP_SCHEDULE: !Sub ${StopScheduleCron}
   
@@ -659,10 +680,12 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.8
       Code: ../../build/discord_notifier
+      Timeout: 12
       Environment:
         Variables:
           WebhookUrl: !Sub ${WebhookUrl}
           STACK_NAME: !Sub ${AWS::StackName}
+          TABLE_NAME: !Sub ${StatusTable}
 
   # Lambda to register commands on discord bot (run once manually)
   DiscordInit:
@@ -678,6 +701,7 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.8
       Code: ../../build/discord_init
+      Timeout: 12
       Environment:
         Variables:
           ApplicationId: !Sub ${DiscordApplicationId}
@@ -710,6 +734,46 @@ Resources:
               "desired_state": "Stopped"
             }
 
+  Ec2EventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source: 
+          - aws.ec2
+          - aws.ecs
+        detail-type:
+          - EC2 Instance State-change Notification
+      Targets:
+        - Arn: !GetAtt DiscordNotifier.Arn
+          Id: DiscordNotifier
+
+  AsgEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source: 
+          - aws.autoscaling
+        detail:
+          AutoScalingGroupName: 
+            - !Ref AutoScalingGroup
+      Targets:
+        - Arn: !GetAtt DiscordNotifier.Arn
+          Id: DiscordNotifier
+
+  EcsEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source: 
+          - aws.ecs
+        detail-type:
+          - ECS Service Action
+        resources:
+          - !Ref EcsService
+      Targets:
+        - Arn: !GetAtt DiscordNotifier.Arn
+          Id: DiscordNotifier
+
   StartSchedule:
     Type: AWS::Events::Rule
     Properties:
@@ -736,6 +800,17 @@ Resources:
               "can_start": "False",
               "desired_state": "Stopped"
             }
+
+  StatusTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: StackName
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: StackName
+          KeyType: HASH
 
   # ====================================================
   # INSTANCE CONFIG
@@ -800,12 +875,14 @@ Resources:
             mkfs.ext4 /dev/nvme1n1
           fi
           mount /dev/sdf /opt/minecraft
-          chown 845:845 /opt/minecraft
+          chown -R 1000:1000 /opt/minecraft
+          chmod -R u+w /opt/minecraft
           aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="modpack.zip"
           aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="log4j2.xml"
           aws s3 sync s3://${Bucket}/mods /opt/mods
           aws s3 sync s3://${Bucket}/config /opt/config
-          yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+          aws s3 sync /opt/minecraft/backups s3://${Bucket}/backups/
+          amazon-linux-extras install epel -y
           yum install -y noip
           noip2 -C -u ${NoipUsername} -p ${NoipPassword} -I eth0 -U 10
           systemctl enable noip.service
@@ -954,7 +1031,7 @@ Resources:
       ContainerDefinitions:      
         - Name: minecraft
           StopTimeout: 120
-          MemoryReservation: 4096
+          MemoryReservation: !Sub ${ContainerMemory}
           Image: !Sub "itzg/minecraft-server:${MinecraftImageTag}"
           PortMappings:
           - ContainerPort: 25565
@@ -982,27 +1059,19 @@ Resources:
           Environment:
             - Name: "EULA"
               Value: "TRUE"
-            - Name: "CF_BASE_DIR"
-              Value: "/data"
-            - Name: USE_AIKAR_FLAGS
-              Value: 'true'
             - Name: STOP_DURATION
               Value: 300
             - Name: STOP_SERVER_ANNOUNCE_DELAY
               Value: 15
-            - Name: JVM_DD_OPTS
-              Value: fml.queryResult:confirm
-            - Name: ALLOW_FLIGHT
-              Value: 'TRUE'
             - Name: PLAYER_IDLE_TIMEOUT
               Value: 180
+            - Name: GENERIC_PACK
+              Value: modpack.zip
             - !If
               - MOTDProvided
               - Name: MOTD
                 Value: !Sub ${MOTD}
               - !Ref AWS::NoValue
-            - Name: CF_SERVER_MOD
-              Value: modpack.zip
             - !If
               - MinecraftTypeTagProvided
               - Name: "TYPE"
@@ -1067,4 +1136,14 @@ Resources:
               - TimezoneProvided
               - Name: "TZ"
                 Value: !Sub "${Timezone}"
+              - !Ref 'AWS::NoValue'
+            - !If
+              - CustomServerType
+              - Name: "CUSTOM_SERVER"
+                Value: !Sub "${ServerJar}"
+              - !Ref 'AWS::NoValue'
+            - !If
+              - JVMOptsProvided
+              - Name: JVM_OPTS
+                Value: !Sub "${JVMOpts}"
               - !Ref 'AWS::NoValue'

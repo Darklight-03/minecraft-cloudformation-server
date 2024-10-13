@@ -3,6 +3,18 @@ AWS:
   ModpackBucket: bucket-name
   StackName: minecraft
   Region: us-west-2
+  InstanceType: m5zn.large
+  SpotPrice: "0.12"
 Schedule: 
   Start: (0 0/2 * * ? *)
   Stop: (0 1/2 * * ? *)
+EcsContainer:
+  Memory: 7000
+  AMI: /aws/service/ecs/optimized-ami/amazon-linux-2/arm64/recommended/image_id #remove this line for x86 such as the m5zn.large
+Minecraft:
+  Memory: 4G
+  Version: 1.7.10
+  JavaVersion: java21
+  JVMArgs: -Dfml.readTimeout=180
+  LevelType: rwg
+  Seed: "-9044716111117546669"
