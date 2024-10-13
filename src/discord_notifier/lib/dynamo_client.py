@@ -8,8 +8,8 @@ with warnings.catch_warnings():
 
 class Dynamo:
     def __init__(self):
-        self.dynamo = boto3.client("dynamodb")
-        self.ec2 = boto3.resource("ec2")
+        self.dynamo = boto3.client("dynamodb", region_name=os.environ.get("AWS_REGION"))
+        self.ec2 = boto3.resource("ec2", region_name=os.environ.get("AWS_REGION"))
         self.stack_name = os.environ["STACK_NAME"]
         self.table_name = os.environ["TABLE_NAME"]
 
