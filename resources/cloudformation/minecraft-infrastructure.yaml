@@ -895,7 +895,7 @@ Resources:
       - 1
       - !GetAZs
         Ref: AWS::Region
-      Size: 10
+      Size: 30
       VolumeType: gp3
       Tags:
         - Key: DoBackup

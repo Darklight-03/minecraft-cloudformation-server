@@ -8,7 +8,7 @@
         },
         {
             "Effect": "Deny",
-            "Action": "Update:*",
+            "Action": ["Update:Replace", "Update:Delete"],
             "Principal": "*",
             "Resource": "*",
             "Condition": {
