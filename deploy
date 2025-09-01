@@ -26,6 +26,8 @@ JavaVersion=$(yq -r .Minecraft.JavaVersion config.yaml)
 JVMOpts=$(yq -r .Minecraft.JVMArgs config.yaml)
 LevelType=$(yq -r .Minecraft.LevelType config.yaml)
 Seed=$(yq -r .Minecraft.Seed config.yaml)
+HostedZoneId=$(yq -r .AWS.HostedZoneId config.yaml)
+RecordName=$(yq -r .AWS.RecordName config.yaml)
 
 # Do not forget the \ at end of each line when modifying this
 ParameterOverrides=(
@@ -51,6 +53,8 @@ ParameterOverrides=(
     JVMOpts="${JVMOpts}"
     LevelType="${LevelType}"
     Seed="${Seed}"
+    HostedZoneId="${HostedZoneId}"
+    RecordName="${RecordName}"
 )
 
 ### Set up environment ###
@@ -115,12 +119,15 @@ mkdir resources/minecraft/mods > /dev/null 2>&1
 aws cloudformation package --template-file resources/cloudformation/minecraft-infrastructure.yaml --s3-bucket "${Bucket}" --output-template-file build/packaged-template.yaml
 cp resources/minecraft-config/* resources/minecraft/config/.
 sed -i "s/^  botToken = .*/  botToken = \"${DiscordIntegrationModBotToken}\"/" resources/minecraft/config/Discord-Integration.toml
+cp -r resources/minecraft/serverutilities/* resources/modpack/serverutilities/
 rm resources/minecraft/modpack.zip
 (cd resources/modpack && zip -r ../minecraft/modpack.zip ./* > /dev/null 2>&1)
 aws s3 sync resources/minecraft/ s3://${ModPackBucket}/ --exclude="*" --include="modpack.zip"
 aws s3 sync resources/minecraft/ s3://${ModPackBucket}/ --exclude="*" --include="log4j2.xml"
+aws s3 sync resources/minecraft/ s3://${ModPackBucket}/ --exclude="*" --include="whitelist.json"
 aws s3 sync resources/minecraft/mods s3://${ModPackBucket}/mods --delete
 aws s3 sync resources/minecraft/config s3://${ModPackBucket}/config --delete
+aws s3 sync resources/minecraft/serverutilities s3://${ModPackBucket}/serverutilities --delete
 
 echo ""
 read -r -p "Packaging complete, would you like to deploy to ${StackName} in ${Region}? [y/N] " response

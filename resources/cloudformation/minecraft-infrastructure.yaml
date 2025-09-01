@@ -309,8 +309,6 @@ Conditions:
   MOTDProvided: !Not [ !Equals [ !Ref MOTD, '' ] ]
   JVMOptsProvided: !Not [ !Equals [ !Ref JVMOpts, '' ] ]
 
-
-
 Mappings:
   ServerState:
     Running:
@@ -783,7 +781,6 @@ Resources:
           Id: DiscordNotifier
           Input: !Sub |
             {
-              "discord_message": "Server can now be started. stop schedule is: ${StopScheduleCron}",
               "can_start": "True"
             }
 
@@ -796,7 +793,6 @@ Resources:
           Id: DiscordNotifier
           Input: !Sub |
             {
-              "discord_message": "Server is now stopping, start schedule is: ${StartScheduleCron}",
               "can_start": "False",
               "desired_state": "Stopped"
             }
@@ -846,47 +842,65 @@ Resources:
         CidrIp: 0.0.0.0/0
       VpcId: !Ref Vpc
 
-  LaunchConfiguration:
-    Type: AWS::AutoScaling::LaunchConfiguration
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
     Properties:
-      AssociatePublicIpAddress: true
-      IamInstanceProfile: !Ref InstanceProfile
-      ImageId: !Ref ECSAMI
-      InstanceType: !Ref InstanceType
-      KeyName: 
-        !If [ KeyPairNameProvided, !Ref KeyPairName, !Ref 'AWS::NoValue' ]
-      SecurityGroups:
-      - !Ref Ec2Sg
-      SpotPrice: !If [ SpotPriceProvided, !Ref SpotPrice, !Ref 'AWS::NoValue' ]
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash -xe
-          echo ECS_CLUSTER=${EcsCluster} >> /etc/ecs/ecs.config
-          yum install -y aws-cli
-          mkdir /opt/minecraft
-          INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
-          aws ec2 attach-volume --volume-id ${Ebs} --instance-id $INSTANCE_ID --device /dev/sdf --region ${AWS::Region}
-          while ! ls /dev/nvme1n1 > /dev/null
-          do 
-            sleep 5
-          done
-          if [ `file -s /dev/nvme1n1 | cut -d ' ' -f 2` = 'data' ]
-          then
-            mkfs.ext4 /dev/nvme1n1
-          fi
-          mount /dev/sdf /opt/minecraft
-          chown -R 1000:1000 /opt/minecraft
-          chmod -R u+w /opt/minecraft
-          aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="modpack.zip"
-          aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="log4j2.xml"
-          aws s3 sync s3://${Bucket}/mods /opt/mods
-          aws s3 sync s3://${Bucket}/config /opt/config
-          aws s3 sync /opt/minecraft/backups s3://${Bucket}/backups/
-          amazon-linux-extras install epel -y
-          yum install -y noip
-          noip2 -C -u ${NoipUsername} -p ${NoipPassword} -I eth0 -U 10
-          systemctl enable noip.service
-          systemctl start noip.service
+      LaunchTemplateName:
+        Fn::Sub: ${AWS::StackName}-launch-template
+      LaunchTemplateData:
+        InstanceType: !Ref InstanceType
+        ImageId: !Ref ECSAMI
+        IamInstanceProfile: 
+          Arn: !GetAtt InstanceProfile.Arn
+        KeyName: 
+          !If [ KeyPairNameProvided, !Ref KeyPairName, !Ref 'AWS::NoValue' ]
+        NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          Groups:
+          - !Ref Ec2Sg
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash -xe
+            echo ECS_CLUSTER=${EcsCluster} >> /etc/ecs/ecs.config
+            yum install -y aws-cli
+            mkdir /opt/minecraft
+            INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+            aws ec2 attach-volume --volume-id ${Ebs} --instance-id $INSTANCE_ID --device /dev/sdf --region ${AWS::Region}
+            while ! ls /dev/nvme1n1 > /dev/null
+            do 
+              sleep 5
+            done
+            if [ `file -s /dev/nvme1n1 | cut -d ' ' -f 2` = 'data' ]
+            then
+              mkfs.ext4 /dev/nvme1n1
+            fi
+            mount /dev/sdf /opt/minecraft
+            chown -R 1000:1000 /opt/minecraft
+            chmod -R u+w /opt/minecraft
+            aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="modpack.zip"
+            aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="log4j2.xml"
+            aws s3 sync s3://${Bucket}/ /opt/minecraft/ --exclude="*" --include="whitelist.json"
+            aws s3 sync s3://${Bucket}/mods /opt/mods --delete
+            aws s3 sync s3://${Bucket}/config /opt/config --delete
+            aws s3 sync s3://${Bucket}/serverutilities /opt/minecraft/serverutilities
+            aws s3 sync /opt/minecraft/backups s3://${Bucket}/backups/
+            PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+            aws route53 change-resource-record-sets \
+              --hosted-zone-id ${HostedZoneId} \
+              --change-batch '{
+                "Comment": "Update A record for Minecraft",
+                "Changes": [{
+                  "Action": "UPSERT",
+                  "ResourceRecordSet": {
+                    "Name": "${RecordName}",
+                    "Type": "A",
+                    "TTL": 60,
+                    "ResourceRecords": [{ "Value": "'"$PUBLIC_IP"'" }]
+                  }
+                }]
+              }' \
+              --region ${AWS::Region}
 
   Ebs:
     Type: AWS::EC2::Volume
@@ -960,7 +974,9 @@ Resources:
     Properties:
       AutoScalingGroupName: !Sub "${AWS::StackName}-asg"
       DesiredCapacity: !FindInMap [ ServerState, !Ref ServerState, DesiredCapacity ]
-      LaunchConfigurationName: !Ref LaunchConfiguration
+      LaunchTemplate: 
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
       MaxSize: !FindInMap [ ServerState, !Ref ServerState, DesiredCapacity ]
       MinSize: !FindInMap [ ServerState, !Ref ServerState, DesiredCapacity ]
       VPCZoneIdentifier:

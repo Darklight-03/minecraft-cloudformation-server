@@ -47,8 +47,12 @@ def lambda_handler(event, context):
             response = ServerMenu(ResponseType.MESSAGE, Server()).get_response()
 
     if request.is_component_interaction():
-        if request.user["id"] != ADMIN_ID and request.get_component() in [
-            "button_start_server"
+        if request.user["id"] not in [
+            ADMIN_ID,
+            "166284587511709697",
+        ] and request.get_component() in [
+            Components.START_SERVER,
+            Components.STOP_SERVER,
         ]:
             # send invalid permission response if no perm
             response = (

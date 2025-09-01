@@ -495,8 +495,7 @@ def test_invalid_user_can_stop(vsig, client):
     )
     response = lambda_handler.lambda_handler(event, "")
     assert_response_is_valid(response, ResponseType.COMPONENT_MESSAGE)
-    assert all(
-        "don't have permission" not in e["description"]
-        for e in response["data"]["embeds"]
+    assert any(
+        "don't have permission" in e["description"] for e in response["data"]["embeds"]
     )
     vsig.assert_called_once_with(event)

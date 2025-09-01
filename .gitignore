@@ -10,6 +10,7 @@ resources/minecraft/config/*
 resources/minecraft/mods/*
 resources/minecraft/modpack.zip
 resources/modpack/*
+resources/modpack*/*
 minecraft
 env
 venvs
